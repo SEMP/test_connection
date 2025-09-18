@@ -12,9 +12,10 @@ import argparse
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+from typing import List, Tuple
 
 
-def ping_host(ip_address, timeout=3, count=1):
+def ping_host(ip_address: str, timeout: int = 3, count: int = 1) -> Tuple[str, bool, str]:
     """
     Ping a single host using system ping command.
 
@@ -48,7 +49,7 @@ def ping_host(ip_address, timeout=3, count=1):
         return (ip_address, False, f"Error: {str(e)}")
 
 
-def read_ip_list(file_path):
+def read_ip_list(file_path: str) -> List[str]:
     """
     Read IP addresses from a text file.
 
@@ -59,13 +60,15 @@ def read_ip_list(file_path):
         list: List of IP addresses
     """
     try:
+        import re
         with open(file_path, 'r') as file:
-            ips = []
-            for line_num, line in enumerate(file, 1):
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    ips.append(line)
-            return ips
+            ips = set()
+            for _, line in enumerate(file, 1):
+                # Remove comments using regex
+                line = re.sub(r'#.*$', '', line).strip()
+                if line:
+                    ips.add(line)
+            return list(ips)
     except FileNotFoundError:
         print(f"Error: File '{file_path}' not found.")
         sys.exit(1)
@@ -74,7 +77,7 @@ def read_ip_list(file_path):
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Check connectivity to a list of IP addresses using ICMP ping')
     parser.add_argument('ip_file', help='Text file containing IP addresses (one per line)')
     parser.add_argument('-t', '--timeout', type=int, default=3, help='Ping timeout in seconds (default: 3)')
