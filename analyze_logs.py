@@ -15,16 +15,21 @@ from collections import defaultdict
 from datetime import datetime
 
 
-def parse_log_files(log_dir: str = "logs") -> Tuple[Dict[str, int], Dict[str, int]]:
+def parse_log_files(log_dir: str = None) -> Tuple[Dict[str, int], Dict[str, int]]:
     """
     Parse all log files in the directory and count successes/failures per IP.
 
     Args:
-        log_dir: Directory containing log files
+        log_dir: Directory containing log files (defaults to logs/ relative to script)
 
     Returns:
         tuple: (success_counts, failure_counts) - dictionaries with IP as key, count as value
     """
+    if log_dir is None:
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(script_dir, "logs")
+
     if not os.path.exists(log_dir):
         print(f"Error: Log directory '{log_dir}' does not exist.")
         return {}, {}
@@ -115,8 +120,12 @@ def write_analysis_files(never_responded: Set[str], always_responded: Set[str],
     """
     analysis_time = datetime.now()
 
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
     # Never responded IPs
-    with open("analysis_never_responded.txt", 'w') as f:
+    never_file = os.path.join(script_dir, "analysis_never_responded.txt")
+    with open(never_file, 'w') as f:
         f.write(f"# IPs that never responded (analysis generated on {analysis_time})\n")
         f.write(f"# Total IPs: {len(never_responded)}\n")
         f.write("# Format: IP_ADDRESS\tFAILED_COUNT\n\n")
@@ -125,7 +134,8 @@ def write_analysis_files(never_responded: Set[str], always_responded: Set[str],
             f.write(f"{ip}\t{failures}\n")
 
     # Always responded IPs
-    with open("analysis_always_responded.txt", 'w') as f:
+    always_file = os.path.join(script_dir, "analysis_always_responded.txt")
+    with open(always_file, 'w') as f:
         f.write(f"# IPs that always responded (analysis generated on {analysis_time})\n")
         f.write(f"# Total IPs: {len(always_responded)}\n")
         f.write("# Format: IP_ADDRESS\tSUCCESS_COUNT\n\n")
@@ -134,7 +144,8 @@ def write_analysis_files(never_responded: Set[str], always_responded: Set[str],
             f.write(f"{ip}\t{successes}\n")
 
     # Sometimes responded IPs
-    with open("analysis_sometimes_responded.txt", 'w') as f:
+    sometimes_file = os.path.join(script_dir, "analysis_sometimes_responded.txt")
+    with open(sometimes_file, 'w') as f:
         f.write(f"# IPs that sometimes responded (analysis generated on {analysis_time})\n")
         f.write(f"# Total IPs: {len(sometimes_responded)}\n")
         f.write("# Format: IP_ADDRESS\tSUCCESS_COUNT\tFAILED_COUNT\tSUCCESS_RATE\n\n")

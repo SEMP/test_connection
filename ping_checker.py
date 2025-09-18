@@ -86,8 +86,11 @@ def setup_logging() -> Tuple[str, str]:
     Returns:
         tuple: (success_log_path, failure_log_path)
     """
-    # Create logs directory if it doesn't exist
-    log_dir = "logs"
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Create logs directory relative to script location
+    log_dir = os.path.join(script_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
     # Generate timestamp for this execution
