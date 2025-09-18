@@ -47,3 +47,14 @@ chmod +x ping_checker.py
 - Implements concurrent pinging with `ThreadPoolExecutor` for performance
 - Supports configurable timeout, ping count, and worker threads
 - Exits with non-zero code if any hosts are unreachable (useful for scripts/monitoring)
+- Automatically logs results to timestamped files in `logs/` directory:
+  - `YYYYMMDD_HHMMSS_successful.txt` - successful ping results
+  - `YYYYMMDD_HHMMSS_failed.txt` - failed ping results
+
+## Log Files
+
+Results are automatically saved to the `logs/` directory with timestamp-based filenames. Each execution creates two files with the same timestamp:
+- Successful connections: IP, status, and response time
+- Failed connections: IP, status, and error reason
+
+Log format: `IP_ADDRESS\tSTATUS\tRESPONSE_INFO`

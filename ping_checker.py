@@ -13,6 +13,8 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from typing import List, Tuple
+import os
+from datetime import datetime
 
 
 def ping_host(ip_address: str, timeout: int = 3, count: int = 1) -> Tuple[str, bool, str]:
@@ -77,6 +79,44 @@ def read_ip_list(file_path: str) -> List[str]:
         sys.exit(1)
 
 
+def setup_logging() -> Tuple[str, str]:
+    """
+    Create log directory and return paths for success and failure log files.
+
+    Returns:
+        tuple: (success_log_path, failure_log_path)
+    """
+    # Create logs directory if it doesn't exist
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Generate timestamp for this execution
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    success_log = os.path.join(log_dir, f"{timestamp}_successful.txt")
+    failure_log = os.path.join(log_dir, f"{timestamp}_failed.txt")
+
+    return success_log, failure_log
+
+
+def log_result(ip_address: str, success: bool, response_info: str, success_log: str, failure_log: str) -> None:
+    """
+    Log ping result to appropriate file.
+
+    Args:
+        ip_address: IP address that was pinged
+        success: Whether the ping was successful
+        response_info: Response time or error information
+        success_log: Path to success log file
+        failure_log: Path to failure log file
+    """
+    log_file = success_log if success else failure_log
+    status = "SUCCESS" if success else "FAILED"
+
+    with open(log_file, 'a') as f:
+        f.write(f"{ip_address}\t{status}\t{response_info}\n")
+
+
 def parse_args() -> argparse.Namespace:
     """
     Parse command line arguments and validate input file.
@@ -111,8 +151,12 @@ def main() -> None:
     args = parse_args()
     ip_list = read_ip_list(args.ip_file)
 
+    # Setup logging
+    success_log, failure_log = setup_logging()
+
     print(f"Testing connectivity to {len(ip_list)} IP addresses...")
     print(f"Timeout: {args.timeout}s, Count: {args.count}, Workers: {args.workers}")
+    print(f"Logs will be saved to: {success_log} and {failure_log}")
     print("-" * 60)
 
     start_time = time.time()
@@ -130,6 +174,9 @@ def main() -> None:
         # Process results as they complete
         for future in as_completed(future_to_ip):
             ip_address, success, response_info = future.result()
+
+            # Log the result
+            log_result(ip_address, success, response_info, success_log, failure_log)
 
             if success:
                 successful += 1
