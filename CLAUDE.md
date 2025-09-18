@@ -9,6 +9,7 @@ This is a Python project for testing network connectivity to multiple IP address
 ## Project Structure
 
 - `ping_checker.py` - Main script for ICMP connectivity testing
+- `analyze_logs.py` - Log analysis tool to categorize IP response patterns
 - `sample_ips.txt` - Example file with IP addresses for testing
 - `requirements.txt` - Project dependencies (uses only standard library)
 
@@ -27,6 +28,15 @@ python ping_checker.py sample_ips.txt -v
 
 # Show help
 python ping_checker.py -h
+```
+
+### Analyzing log results
+```bash
+# Analyze all log files and categorize IP response patterns
+python analyze_logs.py
+
+# Or use make target
+make analyze
 ```
 
 ### Development Setup
@@ -58,3 +68,18 @@ Results are automatically saved to the `logs/` directory with timestamp-based fi
 - Failed connections: IP, status, and error reason
 
 Log format: `IP_ADDRESS\tSTATUS\tRESPONSE_INFO`
+
+## Log Analysis
+
+The `analyze_logs.py` script processes all log files and categorizes IPs based on their response patterns:
+
+- **Never responded**: IPs that failed in all tests
+- **Always responded**: IPs that succeeded in all tests
+- **Sometimes responded**: IPs with mixed success/failure results
+
+Analysis generates/updates these files:
+- `analysis_never_responded.txt`
+- `analysis_always_responded.txt`
+- `analysis_sometimes_responded.txt`
+
+The "sometimes responded" file includes success rates for reliability assessment.

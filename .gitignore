@@ -1,6 +1,11 @@
 # Log files
 logs/
 
+# Analysis files
+analysis_never_responded.txt
+analysis_always_responded.txt
+analysis_sometimes_responded.txt
+
 # Python cache
 __pycache__/
 *.py[cod]
