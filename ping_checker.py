@@ -132,7 +132,7 @@ def main() -> None:
             if args.verbose or not success:
                 print(f"{color}{ip_address:<15} {status:<12} {response_info}{reset_color}")
             elif success:
-                print(f"{color}{ip_address:<15} {status}{reset_color}")
+                print(f"{color}{ip_address:<15} {status:<12} {response_info}{reset_color}")
 
     end_time = time.time()
 
