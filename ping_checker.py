@@ -77,7 +77,13 @@ def read_ip_list(file_path: str) -> List[str]:
         sys.exit(1)
 
 
-def main() -> None:
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command line arguments and validate input file.
+
+    Returns:
+        argparse.Namespace: Parsed arguments with validated ip_file
+    """
     parser = argparse.ArgumentParser(description='Check connectivity to a list of IP addresses using ICMP ping')
     parser.add_argument('ip_file', help='Text file containing IP addresses (one per line)')
     parser.add_argument('-t', '--timeout', type=int, default=3, help='Ping timeout in seconds (default: 3)')
@@ -97,6 +103,13 @@ def main() -> None:
     if not ip_list:
         print("No IP addresses found in the file.")
         sys.exit(1)
+
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    ip_list = read_ip_list(args.ip_file)
 
     print(f"Testing connectivity to {len(ip_list)} IP addresses...")
     print(f"Timeout: {args.timeout}s, Count: {args.count}, Workers: {args.workers}")
