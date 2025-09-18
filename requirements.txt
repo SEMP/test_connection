@@ -1,0 +1,7 @@
+# No external dependencies required
+# This project uses only Python standard library modules:
+# - subprocess (for system ping command)
+# - concurrent.futures (for threading)
+# - argparse (for command line arguments)
+# - pathlib (for file path handling)
+# - time (for timing operations)
