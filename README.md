@@ -11,9 +11,11 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 - **Colored output** for easy result identification
 - **Log analysis tool** to categorize IP response patterns
 - **Flexible command-line interface** with various options
+- **Daemon service mode** with cron-like scheduling
 
 ## Quick Start
 
+### One-time testing
 ```bash
 # Test connectivity using sample IPs
 make test
@@ -25,6 +27,18 @@ make run-my_ips
 
 # Analyze all test results
 make analyze
+```
+
+### Service mode (daemon)
+```bash
+# Install dependencies for daemon mode
+pip install -r requirements.txt
+
+# Start daemon with default configuration
+python ping_daemon.py
+
+# Start daemon with custom configuration
+python ping_daemon.py -c my_schedule.conf
 ```
 
 ## Usage
@@ -164,15 +178,79 @@ make run FILE=external_services.txt
 make analyze
 ```
 
+## Daemon Service Mode
+
+The daemon mode allows continuous operation with cron-like scheduling defined in a configuration file.
+
+### Configuration File (`ping_schedule.conf`)
+
+Define jobs using cron syntax:
+
+```ini
+# Job format: [job:name]
+[job:production_check]
+ip_file = production_servers.txt
+schedule = */5 * * * *        # Every 5 minutes
+timeout = 5
+count = 2
+workers = 20
+
+[job:daily_summary]
+ip_file = all_servers.txt
+schedule = 0 0 * * *          # Daily at midnight
+timeout = 10
+count = 1
+workers = 15
+```
+
+### Schedule Format
+
+Use standard cron syntax: `minute hour day month day_of_week`
+
+| Field | Range | Special |
+|-------|-------|---------|
+| minute | 0-59 | */5 = every 5 minutes |
+| hour | 0-23 | */2 = every 2 hours |
+| day | 1-31 | * = every day |
+| month | 1-12 | * = every month |
+| day_of_week | 0-6 | 1-5 = weekdays |
+
+### Starting the Daemon
+
+```bash
+# Install APScheduler dependency
+pip install apscheduler
+
+# Start daemon (runs in foreground)
+python ping_daemon.py
+
+# Start with custom config
+python ping_daemon.py -c my_config.conf
+
+# Run as system service (example with systemd)
+sudo systemctl start ping-checker
+```
+
+### Daemon Features
+
+- **Graceful shutdown** on SIGINT/SIGTERM
+- **Comprehensive logging** to `ping_daemon.log`
+- **Error handling** and job failure recovery
+- **Multiple concurrent jobs** with different schedules
+- **Relative path support** for IP files
+
 ## Project Structure
 
 ```
 .
 ├── ping_checker.py      # Main ping testing script
+├── ping_daemon.py       # Daemon service with scheduling
 ├── analyze_logs.py      # Log analysis tool
+├── ping_schedule.conf   # Daemon configuration file
 ├── sample_ips.txt       # Example IP file
 ├── Makefile            # Build targets
-├── requirements.txt    # Dependencies (none)
+├── requirements.txt    # Dependencies
 ├── CLAUDE.md           # AI assistant guidance
-└── logs/               # Auto-generated log files
+├── ping_daemon.log     # Daemon operation log
+└── logs/               # Auto-generated ping logs
 ```
