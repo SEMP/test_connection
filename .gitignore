@@ -1,5 +1,6 @@
 # Log files
 logs/
+ping_daemon.log
 
 # Analysis files
 analysis/
