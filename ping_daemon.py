@@ -215,11 +215,11 @@ class PingDaemon:
         # Load jobs from configuration
         self.add_jobs_from_config()
 
-        # Print next run times for all jobs
-        self.logger.info("Scheduled jobs:")
-        for job in self.scheduler.get_jobs():
-            next_run = job.next_run_time
-            self.logger.info(f"  - {job.name}: next run at {next_run}")
+        # Print scheduled jobs
+        jobs = self.scheduler.get_jobs()
+        self.logger.info(f"Scheduled jobs ({len(jobs)} total):")
+        for job in jobs:
+            self.logger.info(f"  - {job.name} (ID: {job.id})")
 
         self.running = True
 
