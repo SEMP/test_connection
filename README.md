@@ -15,51 +15,47 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 
 ## Quick Start
 
-### One-time testing
+The most common workflow is:
+
 ```bash
-# Test connectivity using sample IPs
-make test
+# 1. Setup environment and dependencies
+make install
 
-# Test with your own IP file
-make run FILE=my_ips.txt
-# or
-make run-my_ips
-
-# Analyze all test results
-make analyze
+# 2. Run connectivity tests (uses config/ips_list.txt)
+make run
 ```
 
-### Service mode (daemon)
+### Additional options
 ```bash
-# Install dependencies for daemon mode
-pip install -r requirements.txt
+# Test with sample IPs
+make test
 
-# Start daemon with default configuration
-python ping_daemon.py
+# Run scheduled daemon service
+make daemon
 
-# Start daemon with custom configuration
-python ping_daemon.py -c my_schedule.conf
+# Analyze test results
+make analyze
+
+# Check environment status
+make status
 ```
 
 ## Usage
 
-### Basic Usage
+### Direct Script Usage
 
 ```bash
-python ping_checker.py sample_ips.txt
-```
+# Basic usage with default settings
+python ping_checker.py config/ips_list.txt
 
-### Advanced Options
-
-```bash
 # Custom timeout and worker count
-python ping_checker.py my_ips.txt -t 5 -w 20
+python ping_checker.py config/my_ips.txt -t 5 -w 20
 
 # Verbose output (shows all results)
-python ping_checker.py my_ips.txt -v
+python ping_checker.py config/my_ips.txt -v
 
 # Custom ping count per IP
-python ping_checker.py my_ips.txt -c 3
+python ping_checker.py config/my_ips.txt -c 3
 ```
 
 ### IP File Format
@@ -101,10 +97,13 @@ This generates three analysis files:
 
 | Target | Description |
 |--------|-------------|
-| `make test` | Run ping checker with sample IPs |
-| `make run FILE=filename` | Run with specific file |
-| `make run-basename` | Run with basename.txt (e.g., `make run-production` uses `production.txt`) |
+| `make install` | Create virtual environment and install dependencies |
+| `make run` | Run ping checker with config/ips_list.txt |
+| `make test` | Run ping checker with sample IPs (config/sample_ips.txt) |
+| `make daemon` | Start scheduled daemon service with config/ping_schedule.conf |
 | `make analyze` | Analyze all log files and categorize IP patterns |
+| `make status` | Show virtual environment and project status |
+| `make clean` | Remove virtual environment |
 
 ## Command Line Options
 
@@ -140,8 +139,15 @@ The tool provides:
 
 ## Installation
 
-1. Clone or download the project
-2. No additional installation required - uses Python standard library only
+```bash
+# 1. Clone or download the project
+# 2. Setup environment and install dependencies
+make install
+
+# 3. Configure your IP addresses in config/ips_list.txt
+# 4. Run connectivity tests
+make run
+```
 
 ## Exit Codes
 
@@ -152,32 +158,30 @@ The tool provides:
 
 ### Test production servers
 ```bash
-# Create production_servers.txt with your IPs
-echo "prod1.example.com" > production_servers.txt
-echo "prod2.example.com" >> production_servers.txt
-make run-production_servers
+# Add your IPs to config/ips_list.txt
+echo "prod1.example.com" >> config/ips_list.txt
+echo "prod2.example.com" >> config/ips_list.txt
+make run
 ```
 
 ### Monitor connectivity over time
 ```bash
 # Run multiple tests
-make test
+make run
 sleep 300
-make test
+make run
 sleep 300
-make test
+make run
 
 # Analyze patterns
 make analyze
 ```
 
-### Batch testing
+### Using daemon for continuous monitoring
 ```bash
-# Test multiple environments
-make run FILE=staging_servers.txt
-make run FILE=production_servers.txt
-make run FILE=external_services.txt
-make analyze
+# Configure scheduled jobs in config/ping_schedule.conf
+# Start daemon service
+make daemon
 ```
 
 ## Daemon Service Mode
