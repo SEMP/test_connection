@@ -6,27 +6,27 @@ A service that runs ping connectivity tests based on cron-like schedule configur
 Uses APScheduler to manage periodic tasks defined in ping_schedule.conf
 """
 
-import os
 import sys
 import signal
 import logging
 import time
-from datetime import datetime
-from typing import Dict, List
-from pathlib import Path
+from typing import Dict
 import configparser
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
-# Import our ping functionality
-from ping_checker import parse_args, read_ip_list, setup_logging, ping_host, log_result
+# Import constants and ping functionality
+from constants import (
+    DAEMON_CONFIG_FILE, DAEMON_LOG_FILE, resolve_ip_file_path
+)
+from ping_checker import read_ip_list, setup_logging, ping_host, log_result
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class PingDaemon:
-    def __init__(self, config_file: str = "ping_schedule.conf"):
-        self.config_file = config_file
+    def __init__(self, config_file: str = None):
+        self.config_file = config_file or str(DAEMON_CONFIG_FILE)
         self.scheduler = BlockingScheduler()
         self.running = False
 
@@ -43,8 +43,7 @@ class PingDaemon:
 
     def setup_daemon_logging(self):
         """Setup logging for daemon operations"""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        log_file = os.path.join(script_dir, "ping_daemon.log")
+        log_file = str(DAEMON_LOG_FILE)
 
         logging.basicConfig(
             level=logging.INFO,
@@ -56,7 +55,7 @@ class PingDaemon:
         )
         self.logger = logging.getLogger(__name__)
 
-    def _signal_handler(self, signum, frame):
+    def _signal_handler(self, signum, _):
         """Handle shutdown signals gracefully"""
         self.logger.info(f"Received signal {signum}, shutting down gracefully...")
         self.shutdown()
@@ -76,10 +75,9 @@ class PingDaemon:
         Returns:
             dict: Configuration with job definitions
         """
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(script_dir, self.config_file)
+        config_path = resolve_ip_file_path(self.config_file)
 
-        if not os.path.exists(config_path):
+        if not config_path.exists():
             self.logger.error(f"Configuration file {config_path} not found")
             sys.exit(1)
 
@@ -102,20 +100,16 @@ class PingDaemon:
         self.logger.info(f"Starting ping job '{job_name}' with file '{ip_file}'")
 
         try:
-            # Get script directory for relative paths
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-
-            # Make ip_file path relative to script if not absolute
-            if not os.path.isabs(ip_file):
-                ip_file = os.path.join(script_dir, ip_file)
+            # Resolve IP file path
+            ip_file_path = resolve_ip_file_path(ip_file)
 
             # Check if file exists
-            if not Path(ip_file).exists():
-                self.logger.error(f"IP file '{ip_file}' does not exist for job '{job_name}'")
+            if not ip_file_path.exists():
+                self.logger.error(f"IP file '{ip_file_path}' does not exist for job '{job_name}'")
                 return
 
             # Read IP addresses
-            ip_list = read_ip_list(ip_file)
+            ip_list = read_ip_list(str(ip_file_path))
             if not ip_list:
                 self.logger.warning(f"No IP addresses found in file '{ip_file}' for job '{job_name}'")
                 return

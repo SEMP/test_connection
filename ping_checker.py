@@ -9,12 +9,11 @@ using ICMP ping. Reports success/failure for each IP.
 import subprocess
 import sys
 import argparse
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from typing import List, Tuple
-import os
 from datetime import datetime
+from constants import LOGS_DIR, ensure_directories, resolve_ip_file_path
 
 
 def ping_host(ip_address: str, timeout: int = 3, count: int = 1) -> Tuple[str, bool, str]:
@@ -86,20 +85,16 @@ def setup_logging() -> Tuple[str, str]:
     Returns:
         tuple: (success_log_path, failure_log_path)
     """
-    # Get the directory where this script is located
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Create logs directory relative to script location
-    log_dir = os.path.join(script_dir, "logs")
-    os.makedirs(log_dir, exist_ok=True)
+    # Ensure logs directory exists
+    ensure_directories()
 
     # Generate timestamp for this execution
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    success_log = os.path.join(log_dir, f"{timestamp}_successful.txt")
-    failure_log = os.path.join(log_dir, f"{timestamp}_failed.txt")
+    success_log = LOGS_DIR / f"{timestamp}_successful.txt"
+    failure_log = LOGS_DIR / f"{timestamp}_failed.txt"
 
-    return success_log, failure_log
+    return str(success_log), str(failure_log)
 
 
 def log_result(ip_address: str, success: bool, response_info: str, success_log: str, failure_log: str) -> None:
@@ -136,10 +131,15 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
-    # Check if file exists
-    if not Path(args.ip_file).exists():
-        print(f"Error: File '{args.ip_file}' does not exist.")
+    # Resolve and check if file exists
+    ip_file_path = resolve_ip_file_path(args.ip_file)
+    if not ip_file_path.exists():
+        print(f"Error: File '{ip_file_path}' does not exist.")
+        print(f"Tried looking in: config/, project root, and as provided path")
         sys.exit(1)
+
+    # Update args with resolved path
+    args.ip_file = str(ip_file_path)
 
     # Read IP addresses
     ip_list = read_ip_list(args.ip_file)

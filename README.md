@@ -79,6 +79,8 @@ Create a text file with one IP address per line:
 
 Comments are supported both as full lines (starting with #) and inline comments.
 
+Files should be placed in the `config/` directory, but the scripts will also search in the project root and other locations automatically.
+
 ## Log Analysis
 
 The tool automatically logs all results and provides analysis capabilities:
@@ -182,7 +184,7 @@ make analyze
 
 The daemon mode allows continuous operation with cron-like scheduling defined in a configuration file.
 
-### Configuration File (`ping_schedule.conf`)
+### Configuration File (`config/ping_schedule.conf`)
 
 Define jobs using cron syntax:
 
@@ -246,8 +248,11 @@ sudo systemctl start ping-checker
 ├── ping_checker.py      # Main ping testing script
 ├── ping_daemon.py       # Daemon service with scheduling
 ├── analyze_logs.py      # Log analysis tool
-├── ping_schedule.conf   # Daemon configuration file
-├── sample_ips.txt       # Example IP file
+├── constants.py         # Centralized path constants
+├── config/             # Configuration files directory
+│   ├── ping_schedule.conf  # Daemon job configuration
+│   ├── ips_list.txt        # Default IP list for daemon
+│   └── sample_ips.txt      # Example IP file for testing
 ├── Makefile            # Build targets
 ├── requirements.txt    # Dependencies
 ├── CLAUDE.md           # AI assistant guidance
