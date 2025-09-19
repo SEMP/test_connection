@@ -54,7 +54,7 @@ run:
 		echo "Example: echo '8.8.8.8' > config/ips_list.txt"; \
 		exit 1; \
 	fi
-	$(VENV_PYTHON) ping_checker.py config/ips_list.txt
+	$(VENV_PYTHON) ping_checker.py config/ips_list.txt || true
 
 # Start daemon with scheduled jobs from ping_schedule.conf
 daemon:
