@@ -30,6 +30,11 @@ ANALYSIS_SOMETIMES_RESPONDED = ANALYSIS_DIR / "sometimes_responded.txt"
 # Virtual environment
 VENV_DIR = PROJECT_ROOT / ".venv"
 
+# Default values for ping operations
+DEFAULT_PING_TIMEOUT = 3
+DEFAULT_PING_COUNT = 1
+DEFAULT_WORKER_COUNT = 10
+
 def ensure_directories():
     """
     Create necessary directories if they don't exist.

@@ -13,10 +13,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from typing import List, Tuple
 from datetime import datetime
-from constants import LOGS_DIR, ensure_directories, resolve_ip_file_path
+from constants import (
+    LOGS_DIR, ensure_directories, resolve_ip_file_path,
+    DEFAULT_PING_TIMEOUT, DEFAULT_PING_COUNT, DEFAULT_WORKER_COUNT
+)
 
 
-def ping_host(ip_address: str, timeout: int = 3, count: int = 1) -> Tuple[str, bool, str]:
+def ping_host(ip_address: str, timeout: int = DEFAULT_PING_TIMEOUT, count: int = DEFAULT_PING_COUNT) -> Tuple[str, bool, str]:
     """
     Ping a single host using system ping command.
 
@@ -124,9 +127,9 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description='Check connectivity to a list of IP addresses using ICMP ping')
     parser.add_argument('ip_file', help='Text file containing IP addresses (one per line)')
-    parser.add_argument('-t', '--timeout', type=int, default=3, help='Ping timeout in seconds (default: 3)')
-    parser.add_argument('-c', '--count', type=int, default=1, help='Number of ping packets (default: 1)')
-    parser.add_argument('-w', '--workers', type=int, default=10, help='Number of concurrent workers (default: 10)')
+    parser.add_argument('-t', '--timeout', type=int, default=DEFAULT_PING_TIMEOUT, help=f'Ping timeout in seconds (default: {DEFAULT_PING_TIMEOUT})')
+    parser.add_argument('-c', '--count', type=int, default=DEFAULT_PING_COUNT, help=f'Number of ping packets (default: {DEFAULT_PING_COUNT})')
+    parser.add_argument('-w', '--workers', type=int, default=DEFAULT_WORKER_COUNT, help=f'Number of concurrent workers (default: {DEFAULT_WORKER_COUNT})')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
 
     args = parser.parse_args()
