@@ -21,10 +21,11 @@ DAEMON_CONFIG_FILE = CONFIG_DIR / "ping_schedule.conf"
 LOGS_DIR = PROJECT_ROOT / "logs"
 DAEMON_LOG_FILE = PROJECT_ROOT / "ping_daemon.log"
 
-# Analysis output files
-ANALYSIS_NEVER_RESPONDED = PROJECT_ROOT / "analysis_never_responded.txt"
-ANALYSIS_ALWAYS_RESPONDED = PROJECT_ROOT / "analysis_always_responded.txt"
-ANALYSIS_SOMETIMES_RESPONDED = PROJECT_ROOT / "analysis_sometimes_responded.txt"
+# Analysis directory and output files
+ANALYSIS_DIR = PROJECT_ROOT / "analysis"
+ANALYSIS_NEVER_RESPONDED = ANALYSIS_DIR / "never_responded.txt"
+ANALYSIS_ALWAYS_RESPONDED = ANALYSIS_DIR / "always_responded.txt"
+ANALYSIS_SOMETIMES_RESPONDED = ANALYSIS_DIR / "sometimes_responded.txt"
 
 # Virtual environment
 VENV_DIR = PROJECT_ROOT / ".venv"
@@ -36,6 +37,7 @@ def ensure_directories():
     """
     CONFIG_DIR.mkdir(exist_ok=True)
     LOGS_DIR.mkdir(exist_ok=True)
+    ANALYSIS_DIR.mkdir(exist_ok=True)
 
 def get_absolute_path(relative_path: str) -> Path:
     """

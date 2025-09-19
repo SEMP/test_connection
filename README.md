@@ -93,9 +93,9 @@ make analyze
 ```
 
 This generates three analysis files:
-- **`analysis_never_responded.txt`** - IPs that failed in all tests
-- **`analysis_always_responded.txt`** - IPs that succeeded in all tests
-- **`analysis_sometimes_responded.txt`** - IPs with mixed results (includes success rates)
+- **`analysis/never_responded.txt`** - IPs that failed in all tests
+- **`analysis/always_responded.txt`** - IPs that succeeded in all tests
+- **`analysis/sometimes_responded.txt`** - IPs with mixed results (includes success rates)
 
 ## Make Targets
 
@@ -128,9 +128,9 @@ The tool provides:
    - `YYYYMMDD_HHMMSS_failed.txt`
 
 3. **Analysis files** (updated on each analysis):
-   - `analysis_never_responded.txt`
-   - `analysis_always_responded.txt`
-   - `analysis_sometimes_responded.txt`
+   - `analysis/never_responded.txt`
+   - `analysis/always_responded.txt`
+   - `analysis/sometimes_responded.txt`
 
 ## Requirements
 
@@ -253,6 +253,10 @@ sudo systemctl start ping-checker
 │   ├── ping_schedule.conf  # Daemon job configuration
 │   ├── ips_list.txt        # Default IP list for daemon
 │   └── sample_ips.txt      # Example IP file for testing
+├── analysis/           # Analysis output files
+│   ├── never_responded.txt    # IPs that never responded
+│   ├── always_responded.txt   # IPs that always responded
+│   └── sometimes_responded.txt # IPs with mixed results
 ├── Makefile            # Build targets
 ├── requirements.txt    # Dependencies
 ├── CLAUDE.md           # AI assistant guidance
