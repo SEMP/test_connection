@@ -1,17 +1,16 @@
-# Sample IP addresses for connectivity testing
-# One IP address per line, lines starting with # are ignored
+# Default IP list for daemon mode
+# Add your IP addresses here, one per line
+# Comments are supported (lines starting with # or inline comments)
 
-# Google DNS
-8.8.8.8
-8.8.4.4
+# Example IPs - replace with your actual targets
+8.8.8.8         # Google DNS
+8.8.4.4         # Google DNS secondary
+1.1.1.1         # Cloudflare DNS
+1.0.0.1         # Cloudflare DNS secondary
 
-# Cloudflare DNS
-1.1.1.1
-1.0.0.1
-
-# Local network (may not be reachable)
-192.168.1.1
-10.0.0.1
+# Add your production servers, services, etc.
+192.168.1.1   # Router
+10.0.0.1      # Gateway
 
 # Invalid IP (should fail)
 192.168.999.999
