@@ -12,6 +12,7 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 - **Log analysis tool** to categorize IP response patterns
 - **Flexible command-line interface** with various options
 - **Daemon service mode** with cron-like scheduling
+- **Docker support** for containerized deployment
 
 ## Quick Start
 
@@ -39,6 +40,51 @@ make analyze
 # Check environment status
 make status
 ```
+
+## Docker Usage
+
+### Quick Start with Docker
+
+```bash
+# 1. Configure your IPs
+echo "8.8.8.8" > data/config/ips_list.txt
+echo "1.1.1.1" >> data/config/ips_list.txt
+
+# 2. Build and run daemon
+docker-compose up -d
+
+# 3. Check logs
+docker-compose logs -f ping-checker
+```
+
+### Docker Commands
+
+```bash
+# Build the image
+docker-compose build
+
+# Run daemon service (scheduled jobs)
+docker-compose up -d ping-checker
+
+# Run one-time ping check
+docker-compose run --rm ping-checker-oneshot
+
+# Run log analysis
+docker-compose run --rm ping-analyzer
+
+# View logs
+docker-compose logs -f ping-checker
+
+# Stop services
+docker-compose down
+```
+
+### Docker Volumes
+
+The `data/` directory is mounted as a volume to persist:
+- **Configuration files** in `data/config/`
+- **Log files** in `data/logs/`
+- **Analysis results** in `data/analysis/`
 
 ## Usage
 
@@ -156,6 +202,21 @@ make run
 
 ## Examples
 
+### Docker Examples
+
+```bash
+# Production monitoring with Docker
+echo "prod1.example.com" >> data/config/ips_list.txt
+echo "prod2.example.com" >> data/config/ips_list.txt
+docker-compose up -d
+
+# One-time connectivity check
+docker-compose run --rm ping-checker-oneshot
+
+# Analyze historical data
+docker-compose run --rm ping-analyzer
+```
+
 ### Test production servers
 ```bash
 # Add your IPs to data/config/ips_list.txt
@@ -266,5 +327,8 @@ sudo systemctl start ping-checker
 ├── Makefile            # Build targets
 ├── requirements.txt    # Dependencies
 ├── CLAUDE.md           # AI assistant guidance
+├── Dockerfile          # Docker container definition
+├── docker-compose.yml  # Docker orchestration
+├── .dockerignore       # Docker build exclusions
 └── ping_daemon.log     # Daemon operation log
 ```

@@ -1,0 +1,49 @@
+# Git files
+.git
+.gitignore
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data directory (will be mounted as volume)
+data/logs/
+data/analysis/
+
+# Log files (will be mounted separately)
+ping_daemon.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation that's not needed in container
+README.md
+CLAUDE.md
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Test files (optional - comment out if tests needed in container)
+test_*.py
+*_test.py
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
