@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ping-checker:
     build: .
@@ -8,9 +6,10 @@ services:
     restart: unless-stopped
     volumes:
       # Mount data directory for persistent storage
-      - ./data:/app/data
+      - ./data:/app/data:rw
       # Mount daemon log file to host
-      - ./ping_daemon.log:/app/ping_daemon.log
+      - ./ping_daemon.log:/app/ping_daemon.log:rw
+      - /etc/localtime:/etc/localtime:ro
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=UTC
