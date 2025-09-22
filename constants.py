@@ -38,6 +38,21 @@ DEFAULT_PING_TIMEOUT = 3
 DEFAULT_PING_COUNT = 1
 DEFAULT_WORKER_COUNT = 10
 
+# Database configuration (optional)
+# Set these environment variables to enable database logging:
+# DATABASE_URL=postgresql://user:password@host:port/database
+# Or set individual variables:
+# DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+DATABASE_URL = os.getenv('DATABASE_URL')
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'ping_checker')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+# Database enabled if DATABASE_URL is set or all individual vars are set
+DATABASE_ENABLED = bool(DATABASE_URL or (DB_USER and DB_PASSWORD and DB_NAME))
+
 def ensure_directories():
     """
     Create necessary directories if they don't exist.

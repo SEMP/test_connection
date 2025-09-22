@@ -14,6 +14,7 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 - **Daemon service mode** with cron-like scheduling
 - **Docker support** for containerized deployment
 - **Cross-platform compatibility** (Windows, Linux, macOS)
+- **Optional database logging** (PostgreSQL support)
 
 ## Quick Start
 
@@ -199,6 +200,56 @@ The Makefile automatically detects your operating system and uses the appropriat
 - Python command (`python` on Windows, `python3` on Unix)
 - Virtual environment paths
 - File path extraction from centralized constants
+
+## Database Support (Optional)
+
+The ping checker can optionally store results in a PostgreSQL database alongside the existing file logging system.
+
+### **Setup Database Logging:**
+
+1. **Install PostgreSQL dependency:**
+   ```bash
+   pip install psycopg2-binary
+   ```
+
+2. **Configure database connection (choose one method):**
+
+   **Method 1: Database URL**
+   ```bash
+   export DATABASE_URL="postgresql://user:password@localhost:5432/ping_checker"
+   ```
+
+   **Method 2: Individual variables**
+   ```bash
+   export DB_HOST="localhost"
+   export DB_PORT="5432"
+   export DB_NAME="ping_checker"
+   export DB_USER="your_user"
+   export DB_PASSWORD="your_password"
+   ```
+
+3. **Run ping checker as usual:**
+   ```bash
+   make run
+   # Output will show: "✓ Results saved to database"
+   ```
+
+### **Database Schema:**
+
+The tool automatically creates a `ping_results` table with:
+- `ip_address` (INET) - IP address tested
+- `timestamp` (TIMESTAMPTZ) - When the test was performed
+- `success` (BOOLEAN) - Whether ping succeeded
+- `response_time` (VARCHAR) - Response time (e.g., "15ms")
+- `job_name` (VARCHAR) - Optional job identifier
+- `timeout_seconds` (INTEGER) - Ping timeout used
+- `ping_count` (INTEGER) - Number of ping packets sent
+
+### **Benefits:**
+- **Dual logging**: Files + database (not either/or)
+- **Graceful fallback**: Works without database configured
+- **No breaking changes**: Existing file logging unchanged
+- **Analytics ready**: SQL queries for advanced analysis
 
 ## Installation
 

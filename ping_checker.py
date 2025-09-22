@@ -18,6 +18,7 @@ from constants import (
     LOGS_DIR, ensure_directories, resolve_ip_file_path,
     DEFAULT_PING_TIMEOUT, DEFAULT_PING_COUNT, DEFAULT_WORKER_COUNT
 )
+from database import save_ping_results, is_database_enabled
 
 
 def ping_host(ip_address: str, timeout: int = DEFAULT_PING_TIMEOUT, count: int = DEFAULT_PING_COUNT) -> Tuple[str, bool, str]:
@@ -182,6 +183,7 @@ def main() -> None:
     start_time = time.time()
     successful = 0
     failed = 0
+    all_results = []  # Collect all results for database
 
     # Use ThreadPoolExecutor for concurrent pings
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
@@ -194,6 +196,9 @@ def main() -> None:
         # Process results as they complete
         for future in as_completed(future_to_ip):
             ip_address, success, response_info = future.result()
+
+            # Collect result for database
+            all_results.append((ip_address, success, response_info))
 
             # Log the result
             log_result(ip_address, success, response_info, success_log, failure_log)
@@ -215,6 +220,18 @@ def main() -> None:
                 print(f"{color}{ip_address:<15} {status:<12} {response_info}{reset_color}")
 
     end_time = time.time()
+
+    # Save to database if configured
+    if is_database_enabled():
+        try:
+            if save_ping_results(all_results, timeout=args.timeout, count=args.count):
+                print("✓ Results saved to database")
+            else:
+                print("⚠ Failed to save results to database")
+        except Exception as e:
+            print(f"⚠ Database error: {e}")
+    elif args.verbose:
+        print("Database logging disabled (not configured)")
 
     print("-" * 60)
     print(f"Results: {successful} reachable, {failed} unreachable")
