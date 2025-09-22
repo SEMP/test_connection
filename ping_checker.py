@@ -9,6 +9,7 @@ using ICMP ping. Reports success/failure for each IP.
 import subprocess
 import sys
 import argparse
+import platform
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from typing import List, Tuple
@@ -32,17 +33,30 @@ def ping_host(ip_address: str, timeout: int = DEFAULT_PING_TIMEOUT, count: int =
         tuple: (ip_address, success, response_time)
     """
     try:
-        # Use system ping command
-        cmd = ['ping', '-c', str(count), '-W', str(timeout), ip_address]
+        # Use system ping command with OS-specific parameters
+        if platform.system().lower() == 'windows':
+            # Windows: ping -n count -w timeout_ms ip
+            cmd = ['ping', '-n', str(count), '-w', str(timeout * 1000), ip_address]
+        else:
+            # Unix/Linux/macOS: ping -c count -W timeout ip
+            cmd = ['ping', '-c', str(count), '-W', str(timeout), ip_address]
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout+2)
 
         if result.returncode == 0:
             # Extract response time from ping output
             lines = result.stdout.split('\n')
             for line in lines:
-                if 'time=' in line:
-                    time_str = line.split('time=')[1].split()[0]
-                    return (ip_address, True, f"{time_str}ms")
+                if platform.system().lower() == 'windows':
+                    # Windows format: "Reply from x.x.x.x: bytes=32 time=1ms TTL=64"
+                    if 'time=' in line and 'ms' in line:
+                        time_part = line.split('time=')[1].split()[0]
+                        return (ip_address, True, time_part)
+                else:
+                    # Unix format: "64 bytes from x.x.x.x: icmp_seq=1 ttl=64 time=1.234 ms"
+                    if 'time=' in line:
+                        time_str = line.split('time=')[1].split()[0]
+                        return (ip_address, True, f"{time_str}ms")
             return (ip_address, True, "N/A")
         else:
             return (ip_address, False, "No response")
