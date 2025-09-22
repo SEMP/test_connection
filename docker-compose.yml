@@ -19,10 +19,7 @@ services:
     # Add capabilities needed for ping operations
     cap_add:
       - NET_RAW
-    # Optional: Override default command
-    # command: ["python", "ping_checker.py", "data/config/sample_ips.txt", "-v"]
-
-    # Optional: Resource limits
+    # Resource limits
     deploy:
       resources:
         limits:
@@ -31,23 +28,3 @@ services:
         reservations:
           memory: 128M
           cpus: '0.25'
-
-  # Optional: One-time ping check service
-  ping-checker-oneshot:
-    image: ping-checker:latest
-    container_name: ping-checker-oneshot
-    volumes:
-      - ./data:/app/data
-    command: ["python", "ping_checker.py", "data/config/sample_ips.txt", "-v"]
-    profiles:
-      - oneshot  # Only runs when explicitly requested
-
-  # Optional: Log analysis service
-  ping-analyzer:
-    image: ping-checker:latest
-    container_name: ping-analyzer
-    volumes:
-      - ./data:/app/data
-    command: ["python", "analyze_logs.py"]
-    profiles:
-      - analysis  # Only runs when explicitly requested

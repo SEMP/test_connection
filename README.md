@@ -54,29 +54,24 @@ echo "1.1.1.1" >> data/config/ips_list.txt
 docker-compose up -d
 
 # 3. Check logs
-docker-compose logs -f ping-checker
+docker-compose logs -f
 ```
 
 ### Docker Commands
 
 ```bash
-# Build the image
-docker-compose build
-
-# Run daemon service (scheduled jobs)
-docker-compose up -d ping-checker
-
-# Run one-time ping check
-docker-compose run --rm ping-checker-oneshot
-
-# Run log analysis
-docker-compose run --rm ping-analyzer
+# Build and run daemon service (scheduled jobs)
+docker-compose up -d
 
 # View logs
-docker-compose logs -f ping-checker
+docker-compose logs -f
 
-# Stop services
+# Stop daemon
 docker-compose down
+
+# For one-time operations, use Make commands:
+make run      # One-time ping check
+make analyze  # Log analysis
 ```
 
 ### Docker Volumes
@@ -205,16 +200,16 @@ make run
 ### Docker Examples
 
 ```bash
-# Production monitoring with Docker
+# Production monitoring with Docker daemon
 echo "prod1.example.com" >> data/config/ips_list.txt
 echo "prod2.example.com" >> data/config/ips_list.txt
 docker-compose up -d
 
 # One-time connectivity check
-docker-compose run --rm ping-checker-oneshot
+make run
 
 # Analyze historical data
-docker-compose run --rm ping-analyzer
+make analyze
 ```
 
 ### Test production servers
