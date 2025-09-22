@@ -11,18 +11,21 @@ from pathlib import Path
 # Get the directory where this constants.py file is located (project root)
 PROJECT_ROOT = Path(__file__).parent.absolute()
 
+# Data directory (for Docker volumes)
+DATA_DIR = PROJECT_ROOT / "data"
+
 # Configuration directory and files
-CONFIG_DIR = PROJECT_ROOT / "config"
+CONFIG_DIR = DATA_DIR / "config"
 SAMPLE_IPS_FILE = CONFIG_DIR / "sample_ips.txt"
 DEFAULT_IPS_FILE = CONFIG_DIR / "ips_list.txt"
 DAEMON_CONFIG_FILE = CONFIG_DIR / "ping_schedule.conf"
 
 # Log directory and files
-LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR = DATA_DIR / "logs"
 DAEMON_LOG_FILE = PROJECT_ROOT / "ping_daemon.log"
 
 # Analysis directory and output files
-ANALYSIS_DIR = PROJECT_ROOT / "analysis"
+ANALYSIS_DIR = DATA_DIR / "analysis"
 ANALYSIS_NEVER_RESPONDED = ANALYSIS_DIR / "never_responded.txt"
 ANALYSIS_ALWAYS_RESPONDED = ANALYSIS_DIR / "always_responded.txt"
 ANALYSIS_SOMETIMES_RESPONDED = ANALYSIS_DIR / "sometimes_responded.txt"
@@ -40,6 +43,7 @@ def ensure_directories():
     Create necessary directories if they don't exist.
     Should be called at startup of any script that needs these directories.
     """
+    DATA_DIR.mkdir(exist_ok=True)
     CONFIG_DIR.mkdir(exist_ok=True)
     LOGS_DIR.mkdir(exist_ok=True)
     ANALYSIS_DIR.mkdir(exist_ok=True)

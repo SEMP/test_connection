@@ -39,7 +39,7 @@ install:
 # Test connectivity with sample IPs
 test:
 	@$(MAKE) _ensure_venv
-	$(VENV_PYTHON) ping_checker.py config/sample_ips.txt || true
+	$(VENV_PYTHON) ping_checker.py data/config/sample_ips.txt || true
 
 # Analyze log files
 analyze:
@@ -49,18 +49,18 @@ analyze:
 # Start daemon with default ips_list.txt (single file mode)
 run:
 	@$(MAKE) _ensure_venv
-	@if [ ! -f "config/ips_list.txt" ]; then \
-		echo "Error: config/ips_list.txt not found. Create this file with your IP addresses."; \
-		echo "Example: echo '8.8.8.8' > config/ips_list.txt"; \
+	@if [ ! -f "data/config/ips_list.txt" ]; then \
+		echo "Error: data/config/ips_list.txt not found. Create this file with your IP addresses."; \
+		echo "Example: echo '8.8.8.8' > data/config/ips_list.txt"; \
 		exit 1; \
 	fi
-	$(VENV_PYTHON) ping_checker.py config/ips_list.txt || true
+	$(VENV_PYTHON) ping_checker.py data/config/ips_list.txt || true
 
 # Start daemon with scheduled jobs from ping_schedule.conf
 daemon:
 	@$(MAKE) _ensure_venv
-	@if [ ! -f "config/ping_schedule.conf" ]; then \
-		echo "Error: config/ping_schedule.conf not found."; \
+	@if [ ! -f "data/config/ping_schedule.conf" ]; then \
+		echo "Error: data/config/ping_schedule.conf not found."; \
 		echo "Use the provided sample configuration or create your own."; \
 		exit 1; \
 	fi

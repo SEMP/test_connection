@@ -21,7 +21,7 @@ The most common workflow is:
 # 1. Setup environment and dependencies
 make install
 
-# 2. Run connectivity tests (uses config/ips_list.txt)
+# 2. Run connectivity tests (uses data/config/ips_list.txt)
 make run
 ```
 
@@ -46,16 +46,16 @@ make status
 
 ```bash
 # Basic usage with default settings
-python ping_checker.py config/ips_list.txt
+python ping_checker.py data/config/ips_list.txt
 
 # Custom timeout and worker count
-python ping_checker.py config/my_ips.txt -t 5 -w 20
+python ping_checker.py data/config/my_ips.txt -t 5 -w 20
 
 # Verbose output (shows all results)
-python ping_checker.py config/my_ips.txt -v
+python ping_checker.py data/config/my_ips.txt -v
 
 # Custom ping count per IP
-python ping_checker.py config/my_ips.txt -c 3
+python ping_checker.py data/config/my_ips.txt -c 3
 ```
 
 ### IP File Format
@@ -75,7 +75,7 @@ Create a text file with one IP address per line:
 
 Comments are supported both as full lines (starting with #) and inline comments.
 
-Files should be placed in the `config/` directory, but the scripts will also search in the project root and other locations automatically.
+Files should be placed in the `data/config/` directory, but the scripts will also search in the project root and other locations automatically.
 
 ## Log Analysis
 
@@ -89,18 +89,18 @@ make analyze
 ```
 
 This generates three analysis files:
-- **`analysis/never_responded.txt`** - IPs that failed in all tests
-- **`analysis/always_responded.txt`** - IPs that succeeded in all tests
-- **`analysis/sometimes_responded.txt`** - IPs with mixed results (includes success rates)
+- **`data/analysis/never_responded.txt`** - IPs that failed in all tests
+- **`data/analysis/always_responded.txt`** - IPs that succeeded in all tests
+- **`data/analysis/sometimes_responded.txt`** - IPs with mixed results (includes success rates)
 
 ## Make Targets
 
 | Target | Description |
 |--------|-------------|
 | `make install` | Create virtual environment and install dependencies |
-| `make run` | Run ping checker with config/ips_list.txt |
-| `make test` | Run ping checker with sample IPs (config/sample_ips.txt) |
-| `make daemon` | Start scheduled daemon service with config/ping_schedule.conf |
+| `make run` | Run ping checker with data/config/ips_list.txt |
+| `make test` | Run ping checker with sample IPs (data/config/sample_ips.txt) |
+| `make daemon` | Start scheduled daemon service with data/config/ping_schedule.conf |
 | `make analyze` | Analyze all log files and categorize IP patterns |
 | `make status` | Show virtual environment and project status |
 | `make clean` | Remove virtual environment |
@@ -122,14 +122,14 @@ The tool provides:
    - 🟢 Green for reachable IPs
    - 🔴 Red for unreachable IPs
 
-2. **Log files** in `logs/` directory:
+2. **Log files** in `data/logs/` directory:
    - `YYYYMMDD_HHMMSS_successful.txt`
    - `YYYYMMDD_HHMMSS_failed.txt`
 
 3. **Analysis files** (updated on each analysis):
-   - `analysis/never_responded.txt`
-   - `analysis/always_responded.txt`
-   - `analysis/sometimes_responded.txt`
+   - `data/analysis/never_responded.txt`
+   - `data/analysis/always_responded.txt`
+   - `data/analysis/sometimes_responded.txt`
 
 ## Requirements
 
@@ -144,7 +144,7 @@ The tool provides:
 # 2. Setup environment and install dependencies
 make install
 
-# 3. Configure your IP addresses in config/ips_list.txt
+# 3. Configure your IP addresses in data/config/ips_list.txt
 # 4. Run connectivity tests
 make run
 ```
@@ -158,9 +158,9 @@ make run
 
 ### Test production servers
 ```bash
-# Add your IPs to config/ips_list.txt
-echo "prod1.example.com" >> config/ips_list.txt
-echo "prod2.example.com" >> config/ips_list.txt
+# Add your IPs to data/config/ips_list.txt
+echo "prod1.example.com" >> data/config/ips_list.txt
+echo "prod2.example.com" >> data/config/ips_list.txt
 make run
 ```
 
@@ -179,7 +179,7 @@ make analyze
 
 ### Using daemon for continuous monitoring
 ```bash
-# Configure scheduled jobs in config/ping_schedule.conf
+# Configure scheduled jobs in data/config/ping_schedule.conf
 # Start daemon service
 make daemon
 ```
@@ -188,7 +188,7 @@ make daemon
 
 The daemon mode allows continuous operation with cron-like scheduling defined in a configuration file.
 
-### Configuration File (`config/ping_schedule.conf`)
+### Configuration File (`data/config/ping_schedule.conf`)
 
 Define jobs using cron syntax:
 
@@ -231,7 +231,7 @@ pip install apscheduler
 python ping_daemon.py
 
 # Start with custom config
-python ping_daemon.py -c my_config.conf
+python ping_daemon.py -c data/config/my_config.conf
 
 # Run as system service (example with systemd)
 sudo systemctl start ping-checker
@@ -253,17 +253,18 @@ sudo systemctl start ping-checker
 ├── ping_daemon.py       # Daemon service with scheduling
 ├── analyze_logs.py      # Log analysis tool
 ├── constants.py         # Centralized path constants
-├── config/             # Configuration files directory
-│   ├── ping_schedule.conf  # Daemon job configuration
-│   ├── ips_list.txt        # Default IP list for daemon
-│   └── sample_ips.txt      # Example IP file for testing
-├── analysis/           # Analysis output files
-│   ├── never_responded.txt    # IPs that never responded
-│   ├── always_responded.txt   # IPs that always responded
-│   └── sometimes_responded.txt # IPs with mixed results
+├── data/               # Data directory (Docker volume)
+│   ├── config/         # Configuration files
+│   │   ├── ping_schedule.conf  # Daemon job configuration
+│   │   ├── ips_list.txt        # Default IP list for daemon
+│   │   └── sample_ips.txt      # Example IP file for testing
+│   ├── logs/           # Auto-generated ping logs
+│   └── analysis/       # Analysis output files
+│       ├── never_responded.txt    # IPs that never responded
+│       ├── always_responded.txt   # IPs that always responded
+│       └── sometimes_responded.txt # IPs with mixed results
 ├── Makefile            # Build targets
 ├── requirements.txt    # Dependencies
 ├── CLAUDE.md           # AI assistant guidance
-├── ping_daemon.log     # Daemon operation log
-└── logs/               # Auto-generated ping logs
+└── ping_daemon.log     # Daemon operation log
 ```

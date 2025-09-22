@@ -1,9 +1,7 @@
-# Log files
-logs/
+# Data directory contents (logs and analysis)
+data/logs/
+data/analysis/
 ping_daemon.log
-
-# Analysis files
-analysis/
 
 # Python cache
 __pycache__/
