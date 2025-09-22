@@ -1,5 +1,10 @@
 VENV_DIR = .venv
 
+# Extract file paths from constants.py to avoid hardcoding
+SAMPLE_IPS_FILE = $(shell python -c "from constants import SAMPLE_IPS_FILE; print(SAMPLE_IPS_FILE)" 2>/dev/null || echo "data/config/sample_ips.txt")
+DEFAULT_IPS_FILE = $(shell python -c "from constants import DEFAULT_IPS_FILE; print(DEFAULT_IPS_FILE)" 2>/dev/null || echo "data/config/ips_list.txt")
+DAEMON_CONFIG_FILE = $(shell python -c "from constants import DAEMON_CONFIG_FILE; print(DAEMON_CONFIG_FILE)" 2>/dev/null || echo "data/config/ping_schedule.conf")
+
 # Detect OS and set appropriate Python command and venv paths
 ifeq ($(OS),Windows_NT)
     PYTHON ?= python
@@ -49,7 +54,7 @@ install:
 # Test connectivity with sample IPs
 test:
 	@$(MAKE) _ensure_venv
-	$(VENV_PYTHON) ping_checker.py data/config/sample_ips.txt || true
+	$(VENV_PYTHON) ping_checker.py $(SAMPLE_IPS_FILE) || true
 
 # Analyze log files
 analyze:
@@ -59,18 +64,18 @@ analyze:
 # Start daemon with default ips_list.txt (single file mode)
 run:
 	@$(MAKE) _ensure_venv
-	@if [ ! -f "data/config/ips_list.txt" ]; then \
-		echo "Error: data/config/ips_list.txt not found. Create this file with your IP addresses."; \
-		echo "Example: echo '8.8.8.8' > data/config/ips_list.txt"; \
+	@if [ ! -f "$(DEFAULT_IPS_FILE)" ]; then \
+		echo "Error: $(DEFAULT_IPS_FILE) not found. Create this file with your IP addresses."; \
+		echo "Example: echo '8.8.8.8' > $(DEFAULT_IPS_FILE)"; \
 		exit 1; \
 	fi
-	$(VENV_PYTHON) ping_checker.py data/config/ips_list.txt || true
+	$(VENV_PYTHON) ping_checker.py $(DEFAULT_IPS_FILE) || true
 
 # Start daemon with scheduled jobs from ping_schedule.conf
 daemon:
 	@$(MAKE) _ensure_venv
-	@if [ ! -f "data/config/ping_schedule.conf" ]; then \
-		echo "Error: data/config/ping_schedule.conf not found."; \
+	@if [ ! -f "$(DAEMON_CONFIG_FILE)" ]; then \
+		echo "Error: $(DAEMON_CONFIG_FILE) not found."; \
 		echo "Use the provided sample configuration or create your own."; \
 		exit 1; \
 	fi
