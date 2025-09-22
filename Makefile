@@ -1,7 +1,15 @@
-PYTHON ?= python3
 VENV_DIR = .venv
-VENV_PYTHON = $(VENV_DIR)/bin/python
-VENV_PIP = $(VENV_DIR)/bin/pip
+
+# Detect OS and set appropriate Python command and venv paths
+ifeq ($(OS),Windows_NT)
+    PYTHON ?= python
+    VENV_PYTHON = $(VENV_DIR)/Scripts/python.exe
+    VENV_PIP = $(VENV_DIR)/Scripts/pip.exe
+else
+    PYTHON ?= python3
+    VENV_PYTHON = $(VENV_DIR)/bin/python
+    VENV_PIP = $(VENV_DIR)/bin/pip
+endif
 
 # Check if virtual environment exists and is activated
 VENV_ACTIVE = $(shell python -c "import sys; print('1' if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix) else '0')" 2>/dev/null)
@@ -20,6 +28,8 @@ help:
 	@echo "Testing with custom files:"
 	@echo "  make test-FILE=filename   - Test specific file"
 	@echo "  make test-basename        - Test basename.txt"
+	@echo ""
+	@echo "Cross-platform support: Works on Linux, macOS, and Windows"
 
 # Create virtual environment and install dependencies
 install:
