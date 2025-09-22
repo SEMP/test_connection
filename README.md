@@ -13,6 +13,7 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 - **Flexible command-line interface** with various options
 - **Daemon service mode** with cron-like scheduling
 - **Docker support** for containerized deployment
+- **Cross-platform compatibility** (Windows, Linux, macOS)
 
 ## Quick Start
 
@@ -175,8 +176,29 @@ The tool provides:
 ## Requirements
 
 - Python 3.6+
-- No external dependencies (uses only standard library)
+- APScheduler (for daemon mode scheduling)
 - System `ping` command available
+- **Cross-platform support**: Works on Windows, Linux, and macOS
+
+## Cross-Platform Compatibility
+
+This project fully supports Windows, Linux, and macOS:
+
+### **Windows Support:**
+- Automatic detection of Windows ping command syntax (`-n`, `-w`)
+- Virtual environment path handling (`Scripts/` vs `bin/`)
+- Path compatibility with spaces and backslashes
+
+### **Linux/macOS Support:**
+- Native ping command syntax (`-c`, `-W`)
+- Standard Unix virtual environment structure
+- POSIX path handling
+
+### **Make Commands:**
+The Makefile automatically detects your operating system and uses the appropriate:
+- Python command (`python` on Windows, `python3` on Unix)
+- Virtual environment paths
+- File path extraction from centralized constants
 
 ## Installation
 
