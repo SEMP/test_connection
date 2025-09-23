@@ -3,6 +3,9 @@ data/logs/
 data/analysis/
 ping_daemon.log
 
+# Default SQL file for IP source (users should customize this)
+data/sql/get_ips.sql
+
 # Environment files (contain sensitive database credentials)
 .env
 
