@@ -214,4 +214,16 @@ def is_database_enabled() -> bool:
     Returns:
         bool: True if database is available
     """
-    return get_database_connection() is not None
+    from constants import DATABASE_ENABLED as config_enabled
+
+    if not config_enabled:
+        logging.debug("Database disabled: No environment variables configured")
+        return False
+
+    connection = get_database_connection()
+    if connection is None:
+        logging.warning("Database enabled in config but connection failed")
+        return False
+
+    logging.debug("Database connection successful")
+    return True
