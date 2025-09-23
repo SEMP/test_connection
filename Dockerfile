@@ -21,6 +21,7 @@ COPY ping_checker.py .
 COPY ping_daemon.py .
 COPY analyze_logs.py .
 COPY constants.py .
+COPY database.py .
 
 # Create data directory structure (will be mounted as volume)
 RUN mkdir -p /app/data/config /app/data/logs /app/data/analysis

@@ -239,6 +239,12 @@ class PingDaemon:
         self.running = True
 
         try:
+            # Log database status at startup
+            if is_database_enabled():
+                self.logger.info("Database logging is ENABLED")
+            else:
+                self.logger.info("Database logging is DISABLED (no configuration found)")
+
             self.logger.info("Daemon started. Press Ctrl+C to stop.")
             self.scheduler.start()
         except KeyboardInterrupt:
