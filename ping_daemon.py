@@ -118,6 +118,8 @@ class PingDaemon:
             start_time = time.time()
             successful = 0
             failed = 0
+            processed = 0
+            total_ips = len(ip_list)
             all_results = []  # Collect all results for database
             batch_results = []  # For batched database saves
             batch_size = DEFAULT_DATABASE_BATCH_SIZE  # Save to database in configurable batches
@@ -131,6 +133,7 @@ class PingDaemon:
 
                 for future in as_completed(future_to_ip):
                     ip_address, success, response_info = future.result()
+                    processed += 1
 
                     # Collect result for final database save
                     all_results.append((ip_address, success, response_info))
@@ -140,14 +143,15 @@ class PingDaemon:
                     log_result(ip_address, success, response_info, success_log, failure_log)
 
                     # Show real-time progress in logs
+                    progress = f"({processed}/{total_ips})"
                     if success:
                         successful += 1
                         status = "✓ REACHABLE"
-                        self.logger.info(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info}")
+                        self.logger.info(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info} - processed: {progress}")
                     else:
                         failed += 1
                         status = "✗ UNREACHABLE"
-                        self.logger.warning(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info}")
+                        self.logger.warning(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info} - processed: {progress}")
 
                     # Save to database in batches for better performance
                     if is_database_enabled() and len(batch_results) >= batch_size:
