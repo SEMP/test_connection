@@ -3,6 +3,9 @@ data/logs/
 data/analysis/
 ping_daemon.log
 
+# Environment files (contain sensitive database credentials)
+.env
+
 # Python cache
 __pycache__/
 *.py[cod]
