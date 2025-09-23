@@ -10,11 +10,25 @@ from datetime import datetime
 from typing import Optional, List, Tuple
 from constants import (
     DATABASE_ENABLED, DATABASE_URL, DB_HOST, DB_PORT,
-    DB_NAME, DB_USER, DB_PASSWORD
+    DB_NAME, DB_USER, DB_PASSWORD, DB_SCHEMA
 )
 
 # Global connection object
 _connection = None
+
+def get_table_name(table_name: str) -> str:
+    """
+    Get fully qualified table name with schema if configured.
+
+    Args:
+        table_name: Base table name
+
+    Returns:
+        str: Schema-qualified table name or just table name
+    """
+    if DB_SCHEMA:
+        return f"{DB_SCHEMA}.{table_name}"
+    return table_name
 
 def get_database_connection():
     """
@@ -75,9 +89,16 @@ def create_table_if_not_exists(connection):
         connection: Database connection
     """
     try:
+        table_name = get_table_name("ping_results")
+
         with connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS ping_results (
+            # Create schema if specified and doesn't exist
+            if DB_SCHEMA:
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA};")
+
+            # Create table with schema-qualified name
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,
                     ip_address INET NOT NULL,
                     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -90,10 +111,10 @@ def create_table_if_not_exists(connection):
                 );
 
                 -- Create indexes for common queries
-                CREATE INDEX IF NOT EXISTS idx_ping_results_timestamp ON ping_results(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_ping_results_ip_address ON ping_results(ip_address);
-                CREATE INDEX IF NOT EXISTS idx_ping_results_success ON ping_results(success);
-                CREATE INDEX IF NOT EXISTS idx_ping_results_job_name ON ping_results(job_name);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_timestamp ON {table_name}(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_ip_address ON {table_name}(ip_address);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_success ON {table_name}(success);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_job_name ON {table_name}(job_name);
             """)
             logging.info("Database table ping_results ready")
     except Exception as e:
@@ -120,11 +141,12 @@ def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None
 
     try:
         timestamp = datetime.now()
+        table_name = get_table_name("ping_results")
 
         with connection.cursor() as cursor:
             for ip_address, success, response_time in results:
-                cursor.execute("""
-                    INSERT INTO ping_results
+                cursor.execute(f"""
+                    INSERT INTO {table_name}
                     (ip_address, timestamp, success, response_time, job_name, timeout_seconds, ping_count)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (ip_address, timestamp, success, response_time, job_name, timeout, count))
@@ -152,6 +174,8 @@ def get_ping_statistics(ip_address: str = None, hours: int = 24) -> Optional[dic
         return None
 
     try:
+        table_name = get_table_name("ping_results")
+
         with connection.cursor() as cursor:
             where_clause = "WHERE timestamp >= NOW() - INTERVAL '%s hours'" % hours
             if ip_address:
@@ -171,7 +195,7 @@ def get_ping_statistics(ip_address: str = None, hours: int = 24) -> Optional[dic
                     ) as success_rate,
                     MIN(timestamp) as first_ping,
                     MAX(timestamp) as last_ping
-                FROM ping_results
+                FROM {table_name}
                 {where_clause}
                 GROUP BY ip_address
                 ORDER BY ip_address

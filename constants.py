@@ -48,6 +48,7 @@ DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME', 'ping_checker')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_SCHEMA = os.getenv('DB_SCHEMA')  # Optional schema (defaults to 'public' in PostgreSQL)
 
 # Build DATABASE_URL from individual vars if not explicitly set
 DATABASE_URL = os.getenv('DATABASE_URL')
