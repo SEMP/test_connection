@@ -21,6 +21,7 @@ from constants import (
     DAEMON_CONFIG_FILE, DAEMON_LOG_FILE, resolve_ip_file_path
 )
 from ping_checker import read_ip_list, setup_logging, ping_host, log_result
+from database import save_ping_results, is_database_enabled
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -122,6 +123,7 @@ class PingDaemon:
             start_time = time.time()
             successful = 0
             failed = 0
+            all_results = []  # Collect all results for database
 
             # Execute pings concurrently
             with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -133,6 +135,9 @@ class PingDaemon:
                 for future in as_completed(future_to_ip):
                     ip_address, success, response_info = future.result()
 
+                    # Collect result for database
+                    all_results.append((ip_address, success, response_info))
+
                     # Log the result
                     log_result(ip_address, success, response_info, success_log, failure_log)
 
@@ -142,6 +147,16 @@ class PingDaemon:
                         failed += 1
 
             duration = time.time() - start_time
+
+            # Save to database if configured
+            if is_database_enabled():
+                try:
+                    if save_ping_results(all_results, job_name=job_name, timeout=timeout, count=count):
+                        self.logger.info(f"Job '{job_name}': Results saved to database")
+                    else:
+                        self.logger.warning(f"Job '{job_name}': Failed to save results to database")
+                except Exception as e:
+                    self.logger.error(f"Job '{job_name}': Database error: {e}")
 
             self.logger.info(f"Job '{job_name}' completed: {successful} reachable, {failed} unreachable (duration: {duration:.2f}s)")
 
