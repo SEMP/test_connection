@@ -21,6 +21,15 @@ services:
       - DB_USER=${DB_USER:-}
       - DB_PASSWORD=${DB_PASSWORD:-}
       - DB_SCHEMA=${DB_SCHEMA:-}
+      # IP Source Database configuration (optional)
+      - IP_SOURCE_DATABASE_URL=${IP_SOURCE_DATABASE_URL:-}
+      - IP_SOURCE_DB_HOST=${IP_SOURCE_DB_HOST:-}
+      - IP_SOURCE_DB_PORT=${IP_SOURCE_DB_PORT:-}
+      - IP_SOURCE_DB_NAME=${IP_SOURCE_DB_NAME:-}
+      - IP_SOURCE_DB_USER=${IP_SOURCE_DB_USER:-}
+      - IP_SOURCE_DB_PASSWORD=${IP_SOURCE_DB_PASSWORD:-}
+      - IP_SOURCE_DB_SCHEMA=${IP_SOURCE_DB_SCHEMA:-}
+      - IP_SOURCE_SQL_FILE=${IP_SOURCE_SQL_FILE:-}
     # Network mode allows container to ping external hosts
     network_mode: bridge
     # Add capabilities needed for ping operations

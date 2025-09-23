@@ -20,8 +20,9 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 from constants import (
     DAEMON_CONFIG_FILE, DAEMON_LOG_FILE, resolve_ip_file_path
 )
-from ping_checker import read_ip_list, setup_logging, ping_host, log_result
+from ping_checker import read_ip_list, setup_logging, ping_host, log_result, get_ip_list
 from database import save_ping_results, is_database_enabled
+from ip_source import get_ips_from_database, is_ip_source_database_enabled
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -87,32 +88,25 @@ class PingDaemon:
 
         return config
 
-    def ping_job(self, job_name: str, ip_file: str, timeout: int = 3, count: int = 1, workers: int = 10):
+    def ping_job(self, job_name: str, ip_file: str = None, sql_file: str = None, timeout: int = 3, count: int = 1, workers: int = 10):
         """
         Execute a ping job with specified parameters
 
         Args:
             job_name: Name identifier for the job
-            ip_file: Path to file containing IP addresses
+            ip_file: Path to file containing IP addresses (optional if database configured)
+            sql_file: SQL file for database IP source (optional)
             timeout: Ping timeout in seconds
             count: Number of ping packets
             workers: Number of concurrent workers
         """
-        self.logger.info(f"Starting ping job '{job_name}' with file '{ip_file}'")
+        self.logger.info(f"Starting ping job '{job_name}'")
 
         try:
-            # Resolve IP file path
-            ip_file_path = resolve_ip_file_path(ip_file)
-
-            # Check if file exists
-            if not ip_file_path.exists():
-                self.logger.error(f"IP file '{ip_file_path}' does not exist for job '{job_name}'")
-                return
-
-            # Read IP addresses
-            ip_list = read_ip_list(str(ip_file_path))
+            # Get IP addresses from file or database
+            ip_list = get_ip_list(ip_file, sql_file)
             if not ip_list:
-                self.logger.warning(f"No IP addresses found in file '{ip_file}' for job '{job_name}'")
+                self.logger.warning(f"No IP addresses found for job '{job_name}'")
                 return
 
             # Setup logging for this job
@@ -173,12 +167,19 @@ class PingDaemon:
                 job_name = section_name[4:]  # Remove 'job:' prefix
                 section = config[section_name]
 
-                # Required parameters
-                if 'ip_file' not in section or 'schedule' not in section:
-                    self.logger.error(f"Job '{job_name}' missing required parameters (ip_file, schedule)")
+                # Required parameter: schedule
+                if 'schedule' not in section:
+                    self.logger.error(f"Job '{job_name}' missing required parameter: schedule")
                     continue
 
-                ip_file = section['ip_file']
+                # Check if we have at least one IP source
+                ip_file = section.get('ip_file')
+                sql_file = section.get('sql_file')
+
+                if not ip_file and not sql_file and not is_ip_source_database_enabled():
+                    self.logger.error(f"Job '{job_name}' has no IP source (ip_file, sql_file, or database)")
+                    continue
+
                 schedule = section['schedule']
 
                 # Optional parameters with defaults
@@ -205,13 +206,21 @@ class PingDaemon:
                             month=month,
                             day_of_week=day_of_week
                         ),
-                        args=[job_name, ip_file, timeout, count, workers],
+                        kwargs={
+                            'job_name': job_name,
+                            'ip_file': ip_file,
+                            'sql_file': sql_file,
+                            'timeout': timeout,
+                            'count': count,
+                            'workers': workers
+                        },
                         id=f"ping_job_{job_name}",
                         name=f"Ping Job: {job_name}",
                         replace_existing=True
                     )
 
-                    self.logger.info(f"Added job '{job_name}': {ip_file} (schedule: {schedule})")
+                    source_info = f"file={ip_file}" if ip_file else f"sql={sql_file}" if sql_file else "database"
+                    self.logger.info(f"Added job '{job_name}': {source_info} (schedule: {schedule})")
                     job_count += 1
 
                 except Exception as e:
@@ -244,6 +253,12 @@ class PingDaemon:
                 self.logger.info("Database logging is ENABLED")
             else:
                 self.logger.info("Database logging is DISABLED (no configuration found)")
+
+            # Log IP source database status
+            if is_ip_source_database_enabled():
+                self.logger.info("IP source database is ENABLED")
+            else:
+                self.logger.info("IP source database is DISABLED (will use file sources)")
 
             self.logger.info("Daemon started. Press Ctrl+C to stop.")
             self.scheduler.start()

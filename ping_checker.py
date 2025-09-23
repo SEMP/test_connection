@@ -19,6 +19,7 @@ from constants import (
     DEFAULT_PING_TIMEOUT, DEFAULT_PING_COUNT, DEFAULT_WORKER_COUNT
 )
 from database import save_ping_results, is_database_enabled
+from ip_source import get_ips_from_database, is_ip_source_database_enabled
 
 
 def ping_host(ip_address: str, timeout: int = DEFAULT_PING_TIMEOUT, count: int = DEFAULT_PING_COUNT) -> Tuple[str, bool, str]:
@@ -133,6 +134,47 @@ def log_result(ip_address: str, success: bool, response_info: str, success_log: 
         f.write(f"{ip_address}\t{status}\t{response_info}\n")
 
 
+def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[str]:
+    """
+    Get IP addresses from file or database source.
+
+    Args:
+        ip_file: Text file containing IP addresses (optional)
+        sql_file: SQL file for database query (optional)
+
+    Returns:
+        List[str]: List of IP addresses
+    """
+    # Try database source first if enabled
+    if is_ip_source_database_enabled():
+        try:
+            db_ips = get_ips_from_database(sql_file)
+            if db_ips:
+                print(f"Using {len(db_ips)} IP addresses from database")
+                return db_ips
+        except Exception as e:
+            print(f"Warning: Database IP source failed: {e}")
+
+    # Fall back to file source
+    if not ip_file:
+        print("Error: No IP source available (file or database)")
+        sys.exit(1)
+
+    ip_file_path = resolve_ip_file_path(ip_file)
+    if not ip_file_path.exists():
+        print(f"Error: File '{ip_file_path}' does not exist.")
+        print(f"Tried looking in: config/, project root, and as provided path")
+        sys.exit(1)
+
+    ip_list = read_ip_list(str(ip_file_path))
+    if not ip_list:
+        print("No IP addresses found in the file.")
+        sys.exit(1)
+
+    print(f"Using {len(ip_list)} IP addresses from file: {ip_file_path}")
+    return ip_list
+
+
 def parse_args() -> argparse.Namespace:
     """
     Parse command line arguments and validate input file.
@@ -141,7 +183,8 @@ def parse_args() -> argparse.Namespace:
         argparse.Namespace: Parsed arguments with validated ip_file
     """
     parser = argparse.ArgumentParser(description='Check connectivity to a list of IP addresses using ICMP ping')
-    parser.add_argument('ip_file', help='Text file containing IP addresses (one per line)')
+    parser.add_argument('ip_file', nargs='?', help='Text file containing IP addresses (one per line, optional if database configured)')
+    parser.add_argument('-s', '--sql-file', help='SQL file to use for database IP source (optional)')
     parser.add_argument('-t', '--timeout', type=int, default=DEFAULT_PING_TIMEOUT, help=f'Ping timeout in seconds (default: {DEFAULT_PING_TIMEOUT})')
     parser.add_argument('-c', '--count', type=int, default=DEFAULT_PING_COUNT, help=f'Number of ping packets (default: {DEFAULT_PING_COUNT})')
     parser.add_argument('-w', '--workers', type=int, default=DEFAULT_WORKER_COUNT, help=f'Number of concurrent workers (default: {DEFAULT_WORKER_COUNT})')
@@ -149,20 +192,10 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
-    # Resolve and check if file exists
-    ip_file_path = resolve_ip_file_path(args.ip_file)
-    if not ip_file_path.exists():
-        print(f"Error: File '{ip_file_path}' does not exist.")
-        print(f"Tried looking in: config/, project root, and as provided path")
-        sys.exit(1)
-
-    # Update args with resolved path
-    args.ip_file = str(ip_file_path)
-
-    # Read IP addresses
-    ip_list = read_ip_list(args.ip_file)
-    if not ip_list:
-        print("No IP addresses found in the file.")
+    # Check if we have at least one IP source
+    if not args.ip_file and not is_ip_source_database_enabled():
+        print("Error: No IP source available. Provide an IP file or configure database IP source.")
+        print("Set IP_SOURCE_DATABASE_URL or IP_SOURCE_DB_* environment variables.")
         sys.exit(1)
 
     return args
@@ -170,7 +203,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    ip_list = read_ip_list(args.ip_file)
+    ip_list = get_ip_list(args.ip_file, args.sql_file)
 
     # Setup logging
     success_log, failure_log = setup_logging()

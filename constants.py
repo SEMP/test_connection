@@ -58,6 +58,29 @@ if not DATABASE_URL and DB_USER and DB_PASSWORD and DB_NAME:
 # Database enabled if DATABASE_URL is available (either set directly or built from vars)
 DATABASE_ENABLED = bool(DATABASE_URL)
 
+# IP Source Database Configuration (optional)
+# Set these environment variables to get IP lists from a database instead of files:
+IP_SOURCE_DATABASE_URL = os.getenv('IP_SOURCE_DATABASE_URL')
+IP_SOURCE_DB_HOST = os.getenv('IP_SOURCE_DB_HOST', 'localhost')
+IP_SOURCE_DB_PORT = os.getenv('IP_SOURCE_DB_PORT', '5432')
+IP_SOURCE_DB_NAME = os.getenv('IP_SOURCE_DB_NAME')
+IP_SOURCE_DB_USER = os.getenv('IP_SOURCE_DB_USER')
+IP_SOURCE_DB_PASSWORD = os.getenv('IP_SOURCE_DB_PASSWORD')
+IP_SOURCE_DB_SCHEMA = os.getenv('IP_SOURCE_DB_SCHEMA')
+
+# SQL file to get IP addresses (relative to data/sql/ directory)
+IP_SOURCE_SQL_FILE = os.getenv('IP_SOURCE_SQL_FILE', 'get_ips.sql')
+
+# Build IP_SOURCE_DATABASE_URL from individual vars if not explicitly set
+if not IP_SOURCE_DATABASE_URL and IP_SOURCE_DB_USER and IP_SOURCE_DB_PASSWORD and IP_SOURCE_DB_NAME:
+    IP_SOURCE_DATABASE_URL = f'postgresql://{IP_SOURCE_DB_USER}:{IP_SOURCE_DB_PASSWORD}@{IP_SOURCE_DB_HOST}:{IP_SOURCE_DB_PORT}/{IP_SOURCE_DB_NAME}'
+
+# IP source database enabled if URL is available
+IP_SOURCE_DATABASE_ENABLED = bool(IP_SOURCE_DATABASE_URL)
+
+# SQL directory for IP source queries
+SQL_DIR = DATA_DIR / "sql"
+
 def ensure_directories():
     """
     Create necessary directories if they don't exist.
