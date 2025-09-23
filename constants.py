@@ -43,15 +43,19 @@ DEFAULT_WORKER_COUNT = 10
 # DATABASE_URL=postgresql://user:password@host:port/database
 # Or set individual variables:
 # DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-DATABASE_URL = os.getenv('DATABASE_URL')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME', 'ping_checker')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-# Database enabled if DATABASE_URL is set or all individual vars are set
-DATABASE_ENABLED = bool(DATABASE_URL or (DB_USER and DB_PASSWORD and DB_NAME))
+# Build DATABASE_URL from individual vars if not explicitly set
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL and DB_USER and DB_PASSWORD and DB_NAME:
+    DATABASE_URL = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+
+# Database enabled if DATABASE_URL is available (either set directly or built from vars)
+DATABASE_ENABLED = bool(DATABASE_URL)
 
 def ensure_directories():
     """
