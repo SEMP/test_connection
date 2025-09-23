@@ -18,7 +18,8 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 # Import constants and ping functionality
 from constants import (
-    DAEMON_CONFIG_FILE, DAEMON_LOG_FILE, resolve_ip_file_path
+    DAEMON_CONFIG_FILE, DAEMON_LOG_FILE, resolve_ip_file_path,
+    DEFAULT_DATABASE_BATCH_SIZE
 )
 from ping_checker import read_ip_list, setup_logging, ping_host, log_result, get_ip_list
 from database import save_ping_results, is_database_enabled
@@ -118,6 +119,8 @@ class PingDaemon:
             successful = 0
             failed = 0
             all_results = []  # Collect all results for database
+            batch_results = []  # For batched database saves
+            batch_size = DEFAULT_DATABASE_BATCH_SIZE  # Save to database in configurable batches
 
             # Execute pings concurrently
             with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -129,28 +132,47 @@ class PingDaemon:
                 for future in as_completed(future_to_ip):
                     ip_address, success, response_info = future.result()
 
-                    # Collect result for database
+                    # Collect result for final database save
                     all_results.append((ip_address, success, response_info))
+                    batch_results.append((ip_address, success, response_info))
 
-                    # Log the result
+                    # Log the result to files
                     log_result(ip_address, success, response_info, success_log, failure_log)
 
+                    # Show real-time progress in logs
                     if success:
                         successful += 1
+                        status = "✓ REACHABLE"
+                        self.logger.info(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info}")
                     else:
                         failed += 1
+                        status = "✗ UNREACHABLE"
+                        self.logger.warning(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info}")
+
+                    # Save to database in batches for better performance
+                    if is_database_enabled() and len(batch_results) >= batch_size:
+                        try:
+                            if save_ping_results(batch_results, job_name=job_name, timeout=timeout, count=count):
+                                self.logger.debug(f"Job '{job_name}': Saved batch of {len(batch_results)} results to database")
+                            batch_results = []  # Clear batch after saving
+                        except Exception as e:
+                            self.logger.error(f"Job '{job_name}': Batch database save error: {e}")
 
             duration = time.time() - start_time
 
-            # Save to database if configured
-            if is_database_enabled():
+            # Save any remaining results to database
+            if is_database_enabled() and batch_results:
                 try:
-                    if save_ping_results(all_results, job_name=job_name, timeout=timeout, count=count):
-                        self.logger.info(f"Job '{job_name}': Results saved to database")
-                    else:
-                        self.logger.warning(f"Job '{job_name}': Failed to save results to database")
+                    if save_ping_results(batch_results, job_name=job_name, timeout=timeout, count=count):
+                        self.logger.debug(f"Job '{job_name}': Saved final batch of {len(batch_results)} results to database")
                 except Exception as e:
-                    self.logger.error(f"Job '{job_name}': Database error: {e}")
+                    self.logger.error(f"Job '{job_name}': Final batch database save error: {e}")
+
+            # Log database save summary
+            if is_database_enabled():
+                self.logger.info(f"Job '{job_name}': All {len(all_results)} results saved to database")
+            else:
+                self.logger.debug(f"Job '{job_name}': Database logging disabled")
 
             self.logger.info(f"Job '{job_name}' completed: {successful} reachable, {failed} unreachable (duration: {duration:.2f}s)")
 

@@ -38,6 +38,9 @@ DEFAULT_PING_TIMEOUT = 3
 DEFAULT_PING_COUNT = 1
 DEFAULT_WORKER_COUNT = 10
 
+# Database batch size for saving ping results
+DEFAULT_DATABASE_BATCH_SIZE = 50
+
 # Database configuration (optional)
 # Set these environment variables to enable database logging:
 # DATABASE_URL=postgresql://user:password@host:port/database
