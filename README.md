@@ -207,9 +207,9 @@ The ping checker can optionally store results in a PostgreSQL database alongside
 
 ### **Setup Database Logging:**
 
-1. **Install PostgreSQL dependency:**
+1. **Install dependencies (includes PostgreSQL support):**
    ```bash
-   pip install psycopg2-binary
+   make install  # Installs psycopg2-binary automatically
    ```
 
 2. **Configure database connection (choose one method):**
