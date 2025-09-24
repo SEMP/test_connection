@@ -15,6 +15,10 @@ A Python tool for testing network connectivity to multiple IP addresses using IC
 - **Docker support** for containerized deployment
 - **Cross-platform compatibility** (Windows, Linux, macOS)
 - **Optional database logging** (PostgreSQL support)
+- **Database IP sources** with configurable SQL queries
+- **Label support** for module-based IP categorization
+- **Real-time progress tracking** with batched database saves
+- **IP validation** with invalid IP logging
 
 ## Quick Start
 
@@ -80,6 +84,7 @@ make analyze  # Log analysis
 
 The `data/` directory is mounted as a volume to persist:
 - **Configuration files** in `data/config/`
+- **SQL query files** in `data/sql/`
 - **Log files** in `data/logs/`
 - **Analysis results** in `data/analysis/`
 
@@ -99,6 +104,12 @@ python ping_checker.py data/config/my_ips.txt -v
 
 # Custom ping count per IP
 python ping_checker.py data/config/my_ips.txt -c 3
+
+# Use database IP source with custom SQL file
+python ping_checker.py -s my_custom_query.sql
+
+# Mix of options with database source
+python ping_checker.py -s network_devices.sql -t 5 -w 15 -v
 ```
 
 ### IP File Format
@@ -119,6 +130,107 @@ Create a text file with one IP address per line:
 Comments are supported both as full lines (starting with #) and inline comments.
 
 Files should be placed in the `data/config/` directory, but the scripts will also search in the project root and other locations automatically.
+
+## IP Sources: Files vs Database
+
+The ping checker supports multiple IP source methods depending on your use case:
+
+### **Text Files (Traditional Method)**
+
+**When to use:**
+- Simple, static IP lists
+- Manual management of IP addresses
+- Testing specific sets of IPs
+- No existing inventory database
+
+**Example:**
+```bash
+# Use a specific IP file
+python ping_checker.py data/config/my_servers.txt
+
+# Or let it auto-find ips_list.txt
+make run
+```
+
+### **Database IP Sources (Advanced Method)**
+
+**When to use:**
+- Dynamic IP lists from existing databases
+- Integration with network inventory systems
+- Module-based IP categorization (TCP devices, etc.)
+- Automatic IP discovery from CMDB
+
+**Setup:**
+1. **Configure database connection:**
+   ```bash
+   export IP_SOURCE_DATABASE_URL="postgresql://user:pass@host:5432/inventory_db"
+   ```
+
+2. **Create SQL query file in `data/sql/`:**
+   ```sql
+   -- data/sql/tcp_modules.sql
+   SELECT ip_address,
+          CONCAT(module_name, '_TCP') as label
+   FROM network_devices n
+   JOIN modules m ON n.module_id = m.id
+   WHERE n.device_type = 'tcp_meter' AND n.active = true;
+   ```
+
+3. **Use database source:**
+   ```bash
+   # Use specific SQL file
+   python ping_checker.py -s tcp_modules.sql
+
+   # Use default get_ips.sql
+   python ping_checker.py  # (if no txt file specified)
+   ```
+
+### **Daemon Jobs Configuration**
+
+Configure different IP sources per job:
+
+```ini
+# data/config/ping_schedule.conf
+
+# Traditional file source
+[job:external_services]
+ip_file = external_ips.txt
+schedule = 0 * * * *
+
+# Database source with custom SQL
+[job:tcp_modules]
+sql_file = tcp_modules.sql
+schedule = */5 * * * *
+
+# Database source with default SQL
+[job:all_devices]
+# No ip_file or sql_file = uses default database query
+schedule = 0 */6 * * *
+```
+
+### **Label Support for Module Categorization**
+
+Database sources can return labels for per-IP module identification:
+
+**Single Column (IP only):**
+```sql
+SELECT ip_address FROM devices WHERE active = true;
+-- Results stored with label = NULL
+```
+
+**Two Columns (IP + Label):**
+```sql
+SELECT ip_address, module_name
+FROM devices d
+JOIN modules m ON d.module_id = m.id
+WHERE active = true;
+-- Results stored with module labels
+```
+
+**Database benefits:**
+- Direct module filtering: `WHERE label = 'Module_A_TCP'`
+- No complex joins needed in ping results
+- Real-time IP discovery from inventory systems
 
 ## Log Analysis
 
@@ -155,6 +267,7 @@ This generates three analysis files:
 | `-t, --timeout` | Ping timeout in seconds | 3 |
 | `-c, --count` | Number of ping packets | 1 |
 | `-w, --workers` | Concurrent worker threads | 10 |
+| `-s, --sql-file` | SQL file for database IP source | None |
 | `-v, --verbose` | Show all results (not just failures) | False |
 
 ## Output
@@ -166,8 +279,9 @@ The tool provides:
    - 🔴 Red for unreachable IPs
 
 2. **Log files** in `data/logs/` directory:
-   - `YYYYMMDD_HHMMSS_successful.txt`
-   - `YYYYMMDD_HHMMSS_failed.txt`
+   - `YYYYMMDD_HHMMSS_successful.txt` - Successful ping results
+   - `YYYYMMDD_HHMMSS_failed.txt` - Failed ping results
+   - `YYYYMMDD_HHMMSS_invalid_ips.txt` - Invalid/malformed IP addresses (if any)
 
 3. **Analysis files** (updated on each analysis):
    - `data/analysis/never_responded.txt`
@@ -203,53 +317,110 @@ The Makefile automatically detects your operating system and uses the appropriat
 
 ## Database Support (Optional)
 
-The ping checker can optionally store results in a PostgreSQL database alongside the existing file logging system.
+The ping checker supports PostgreSQL integration for both **result logging** and **IP source management**. Database support is completely optional and works alongside file-based operations.
 
-### **Setup Database Logging:**
+### **Two Database Uses:**
 
-1. **Install dependencies (includes PostgreSQL support):**
+#### **1. Database Result Logging**
+Store ping results in PostgreSQL for advanced analytics:
+
+**Setup:**
+1. **Install dependencies:**
    ```bash
-   make install  # Installs psycopg2-binary automatically
+   make install  # Includes psycopg2-binary
    ```
 
-2. **Configure database connection (choose one method):**
-
-   **Method 1: Database URL**
+2. **Configure results database:**
    ```bash
-   export DATABASE_URL="postgresql://user:password@localhost:5432/ping_checker"
+   export DATABASE_URL="postgresql://user:password@localhost:5432/ping_results"
+   # Optional: Use schema for multi-tenant deployments
+   export DB_SCHEMA="monitoring"
    ```
 
-   **Method 2: Individual variables**
-   ```bash
-   export DB_HOST="localhost"
-   export DB_PORT="5432"
-   export DB_NAME="ping_checker"
-   export DB_USER="your_user"
-   export DB_PASSWORD="your_password"
-   ```
-
-3. **Run ping checker as usual:**
+3. **Run as usual:**
    ```bash
    make run
-   # Output will show: "✓ Results saved to database"
+   # Shows: "✓ Results saved to database"
    ```
 
-### **Database Schema:**
+#### **2. Database IP Sources**
+Get IP addresses from existing inventory databases:
 
-The tool automatically creates a `ping_results` table with:
+**Setup:**
+1. **Configure IP source database:**
+   ```bash
+   export IP_SOURCE_DATABASE_URL="postgresql://user:password@inventory.company.com:5432/network_db"
+   ```
+
+2. **Create SQL query files:**
+   ```sql
+   -- data/sql/tcp_devices.sql
+   SELECT device_ip,
+          CONCAT(module_name, '_TCP') as label
+   FROM network_inventory
+   WHERE device_type = 'tcp_communication';
+   ```
+
+3. **Use database IPs:**
+   ```bash
+   python ping_checker.py -s tcp_devices.sql
+   ```
+
+### **Database Schema (Results)**
+
+Auto-created `ping_results` table:
+- `id` (SERIAL) - Primary key
 - `ip_address` (INET) - IP address tested
-- `timestamp` (TIMESTAMPTZ) - When the test was performed
-- `success` (BOOLEAN) - Whether ping succeeded
-- `response_time` (VARCHAR) - Response time (e.g., "15ms")
-- `job_name` (VARCHAR) - Optional job identifier
+- `ping_time` (TIMESTAMPTZ) - Test timestamp
+- `success` (BOOLEAN) - Ping success/failure
+- `response_time_ms` (FLOAT) - Response time in milliseconds
+- `job_name` (VARCHAR) - Job identifier (e.g., "tcp_modules")
+- `label` (VARCHAR) - Module/device label (e.g., "Module_A_TCP")
 - `timeout_seconds` (INTEGER) - Ping timeout used
-- `ping_count` (INTEGER) - Number of ping packets sent
+- `ping_count` (INTEGER) - Number of pings sent
+
+### **Advanced Database Features:**
+
+**IP Validation & Error Handling:**
+- Invalid IPs (like `10.204.15..`) are logged to `invalid_ips.txt`
+- Database operations continue with valid IPs only
+- Prevents batch INSERT failures
+
+**Real-time Progress & Batching:**
+- Results saved in configurable batches (default: 50 records)
+- Real-time progress: `"(156/1000)"` for large IP lists
+- Efficient for monitoring 1000+ devices
+
+**Schema Support:**
+```bash
+export DB_SCHEMA="production"
+# Tables created as: production.ping_results
+```
+
+**Query Examples:**
+```sql
+-- Module success rates
+SELECT label,
+       AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END) as success_rate,
+       COUNT(*) as total_tests
+FROM ping_results
+WHERE ping_time >= NOW() - INTERVAL '24 hours'
+GROUP BY label;
+
+-- Recent failures by module
+SELECT ip_address, label, ping_time
+FROM ping_results
+WHERE success = false
+  AND ping_time >= NOW() - INTERVAL '1 hour'
+ORDER BY ping_time DESC;
+```
 
 ### **Benefits:**
-- **Dual logging**: Files + database (not either/or)
-- **Graceful fallback**: Works without database configured
-- **No breaking changes**: Existing file logging unchanged
-- **Analytics ready**: SQL queries for advanced analysis
+- **Dual logging**: Files + database (both active)
+- **Graceful fallback**: Works without database
+- **No breaking changes**: File logging unchanged
+- **Module analytics**: Direct label-based filtering
+- **Enterprise ready**: Schema support for multi-tenant
 
 ## Installation
 
@@ -319,23 +490,32 @@ The daemon mode allows continuous operation with cron-like scheduling defined in
 
 ### Configuration File (`data/config/ping_schedule.conf`)
 
-Define jobs using cron syntax:
+Define jobs with multiple IP source options:
 
 ```ini
-# Job format: [job:name]
-[job:production_check]
-ip_file = production_servers.txt
-schedule = */5 * * * *        # Every 5 minutes
-timeout = 5
-count = 2
-workers = 20
-
-[job:daily_summary]
-ip_file = all_servers.txt
-schedule = 0 0 * * *          # Daily at midnight
+# Traditional file source
+[job:external_services]
+ip_file = external_ips.txt
+schedule = 0 * * * *          # Every hour
 timeout = 10
 count = 1
 workers = 15
+
+# Database source with custom SQL
+[job:tcp_modules]
+sql_file = tcp_devices.sql
+schedule = */5 * * * *        # Every 5 minutes
+timeout = 3
+count = 1
+workers = 20
+
+# Database source with default SQL (uses get_ips.sql)
+[job:all_devices]
+# No ip_file or sql_file specified
+schedule = 0 */6 * * *        # Every 6 hours
+timeout = 5
+count = 2
+workers = 25
 ```
 
 ### Schedule Format
@@ -382,11 +562,18 @@ sudo systemctl start ping-checker
 ├── ping_daemon.py       # Daemon service with scheduling
 ├── analyze_logs.py      # Log analysis tool
 ├── constants.py         # Centralized path constants
+├── database.py          # PostgreSQL integration (optional)
+├── ip_source.py         # Database IP source management
 ├── data/               # Data directory (Docker volume)
 │   ├── config/         # Configuration files
 │   │   ├── ping_schedule.conf  # Daemon job configuration
 │   │   ├── ips_list.txt        # Default IP list for daemon
 │   │   └── sample_ips.txt      # Example IP file for testing
+│   ├── sql/            # SQL query files for database IP sources
+│   │   ├── get_ips.sql         # Default SQL query (user customizable)
+│   │   ├── get_servers.sql     # Server IP addresses with labels
+│   │   ├── get_network_devices.sql  # Network devices with modules
+│   │   └── get_critical_hosts.sql   # Critical infrastructure hosts
 │   ├── logs/           # Auto-generated ping logs
 │   └── analysis/       # Analysis output files
 │       ├── never_responded.txt    # IPs that never responded
