@@ -12,7 +12,7 @@ import argparse
 import platform
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import datetime
 from constants import (
     LOGS_DIR, ensure_directories, resolve_ip_file_path,
@@ -134,7 +134,7 @@ def log_result(ip_address: str, success: bool, response_info: str, success_log: 
         f.write(f"{ip_address}\t{status}\t{response_display}\n")
 
 
-def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[str]:
+def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[Tuple[str, Optional[str]]]:
     """
     Get IP addresses from file or database source.
 
@@ -143,7 +143,8 @@ def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[str]:
         sql_file: SQL file for database query (optional)
 
     Returns:
-        List[str]: List of IP addresses
+        List[Tuple[str, Optional[str]]]: List of (ip_address, label) tuples
+        For file sources, label will be None
     """
     # Try database source first if enabled
     if is_ip_source_database_enabled():
@@ -166,11 +167,13 @@ def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[str]:
         print(f"Tried looking in: config/, project root, and as provided path")
         sys.exit(1)
 
-    ip_list = read_ip_list(str(ip_file_path))
-    if not ip_list:
+    ip_strings = read_ip_list(str(ip_file_path))
+    if not ip_strings:
         print("No IP addresses found in the file.")
         sys.exit(1)
 
+    # Convert file IPs to tuple format (ip, label=None)
+    ip_list = [(ip, None) for ip in ip_strings]
     print(f"Using {len(ip_list)} IP addresses from file: {ip_file_path}")
     return ip_list
 
@@ -220,18 +223,19 @@ def main() -> None:
 
     # Use ThreadPoolExecutor for concurrent pings
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
-        # Submit all ping tasks
-        future_to_ip = {
-            executor.submit(ping_host, ip, args.timeout, args.count): ip
-            for ip in ip_list
+        # Submit all ping tasks with IP and label mapping
+        future_to_ip_data = {
+            executor.submit(ping_host, ip, args.timeout, args.count): (ip, label)
+            for ip, label in ip_list
         }
 
         # Process results as they complete
-        for future in as_completed(future_to_ip):
+        for future in as_completed(future_to_ip_data):
             ip_address, success, response_info = future.result()
+            _, label = future_to_ip_data[future]  # Get label from mapping
 
-            # Collect result for database
-            all_results.append((ip_address, success, response_info))
+            # Collect result for database (now includes label)
+            all_results.append((ip_address, success, response_info, label))
 
             # Log the result
             log_result(ip_address, success, response_info, success_log, failure_log)

@@ -106,6 +106,7 @@ def create_table_if_not_exists(connection):
                     success BOOLEAN NOT NULL,
                     response_time_ms FLOAT,
                     job_name VARCHAR(100),
+                    label VARCHAR(200),
                     timeout_seconds INTEGER,
                     ping_count INTEGER
                 );
@@ -115,6 +116,7 @@ def create_table_if_not_exists(connection):
                 CREATE INDEX IF NOT EXISTS idx_ping_results_ip_address ON {table_name}(ip_address);
                 CREATE INDEX IF NOT EXISTS idx_ping_results_success ON {table_name}(success);
                 CREATE INDEX IF NOT EXISTS idx_ping_results_job_name ON {table_name}(job_name);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_label ON {table_name}(label);
             """)
             logging.info("Database table ping_results ready")
     except Exception as e:
@@ -166,13 +168,13 @@ def log_invalid_ips(invalid_ips: List[str], job_name: str = None) -> None:
     except Exception as e:
         logging.error(f"Failed to write invalid IPs log: {e}")
 
-def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None,
+def save_ping_results(results: List[Tuple[str, bool, str, Optional[str]]], job_name: str = None,
                      timeout: int = None, count: int = None) -> bool:
     """
     Save ping results to database if configured.
 
     Args:
-        results: List of (ip_address, success, response_time) tuples
+        results: List of (ip_address, success, response_time, label) tuples
         job_name: Optional job name for tracking
         timeout: Ping timeout used
         count: Ping count used
@@ -192,9 +194,9 @@ def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None
         valid_results = []
         invalid_ips = []
 
-        for ip_address, success, response_time in results:
+        for ip_address, success, response_time, label in results:
             if is_valid_ip(ip_address):
-                valid_results.append((ip_address, success, response_time))
+                valid_results.append((ip_address, success, response_time, label))
             else:
                 invalid_ips.append(ip_address)
 
@@ -208,15 +210,15 @@ def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None
             return len(invalid_ips) == 0  # Return True only if there were no invalid IPs
 
         with connection.cursor() as cursor:
-            for ip_address, success, response_time in valid_results:
+            for ip_address, success, response_time, label in valid_results:
                 # For failed pings, store NULL instead of error strings in response_time_ms
                 response_time_value = response_time if success and isinstance(response_time, (int, float)) else None
 
                 cursor.execute(f"""
                     INSERT INTO {table_name}
-                    (ip_address, ping_time, success, response_time_ms, job_name, timeout_seconds, ping_count)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (ip_address, timestamp, success, response_time_value, job_name, timeout, count))
+                    (ip_address, ping_time, success, response_time_ms, job_name, label, timeout_seconds, ping_count)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (ip_address, timestamp, success, response_time_value, job_name, label, timeout, count))
 
         if invalid_ips:
             logging.info(f"Saved {len(valid_results)} valid ping results to database ({len(invalid_ips)} invalid IPs filtered)")

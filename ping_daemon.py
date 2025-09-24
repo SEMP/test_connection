@@ -126,18 +126,19 @@ class PingDaemon:
 
             # Execute pings concurrently
             with ThreadPoolExecutor(max_workers=workers) as executor:
-                future_to_ip = {
-                    executor.submit(ping_host, ip, timeout, count): ip
-                    for ip in ip_list
+                future_to_ip_data = {
+                    executor.submit(ping_host, ip, timeout, count): (ip, label)
+                    for ip, label in ip_list
                 }
 
-                for future in as_completed(future_to_ip):
+                for future in as_completed(future_to_ip_data):
                     ip_address, success, response_info = future.result()
+                    _, label = future_to_ip_data[future]  # Get label from mapping
                     processed += 1
 
-                    # Collect result for final database save
-                    all_results.append((ip_address, success, response_info))
-                    batch_results.append((ip_address, success, response_info))
+                    # Collect result for final database save (now includes label)
+                    all_results.append((ip_address, success, response_info, label))
+                    batch_results.append((ip_address, success, response_info, label))
 
                     # Log the result to files
                     log_result(ip_address, success, response_info, success_log, failure_log)

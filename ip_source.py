@@ -6,7 +6,7 @@ configurable SQL queries stored in files.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from pathlib import Path
 from constants import (
     IP_SOURCE_DATABASE_ENABLED, IP_SOURCE_DATABASE_URL,
@@ -95,16 +95,17 @@ def load_sql_query(sql_file: str) -> Optional[str]:
         logging.error(f"Failed to load SQL file {sql_file}: {e}")
         return None
 
-def get_ips_from_database(sql_file: str = None) -> Optional[List[str]]:
+def get_ips_from_database(sql_file: str = None) -> Optional[List[Tuple[str, Optional[str]]]]:
     """
     Get IP addresses from database using SQL query from file.
-    Query must return a single column with IP addresses.
+    Query can return one column (IP only) or two columns (IP, label).
 
     Args:
         sql_file: SQL filename (defaults to IP_SOURCE_SQL_FILE from config)
 
     Returns:
-        List[str]: List of IP addresses or None if failed
+        List[Tuple[str, Optional[str]]]: List of (ip_address, label) tuples or None if failed
+        For single-column queries, label will be None
     """
     if not IP_SOURCE_DATABASE_ENABLED:
         logging.debug("IP source database not configured")
@@ -125,16 +126,29 @@ def get_ips_from_database(sql_file: str = None) -> Optional[List[str]]:
             cursor.execute(query)
             results = cursor.fetchall()
 
-            # Extract IP addresses from first column (regardless of column name)
-            ip_list = []
+            # Extract IP addresses and optional labels
+            ip_data = []
+            seen_ips = set()  # Track unique IPs
+
             for row in results:
                 if row and len(row) > 0:
                     ip = str(row[0]).strip()
-                    if ip and ip not in ip_list:  # Avoid duplicates
-                        ip_list.append(ip)
+                    if ip and ip not in seen_ips:
+                        seen_ips.add(ip)
 
-            logging.info(f"Retrieved {len(ip_list)} IP addresses from database using {sql_file}")
-            return ip_list if ip_list else None
+                        # Check if there's a second column for label
+                        label = None
+                        if len(row) > 1 and row[1] is not None:
+                            label = str(row[1]).strip()
+
+                        ip_data.append((ip, label))
+
+            if len(results) > 0 and len(results[0]) > 1:
+                logging.info(f"Retrieved {len(ip_data)} IP addresses with labels from database using {sql_file}")
+            else:
+                logging.info(f"Retrieved {len(ip_data)} IP addresses from database using {sql_file}")
+
+            return ip_data if ip_data else None
 
     except Exception as e:
         logging.error(f"Failed to get IPs from database: {e}")
