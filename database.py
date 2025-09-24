@@ -6,11 +6,12 @@ Falls back gracefully if database is not configured or dependencies are missing.
 """
 
 import logging
+import ipaddress
 from datetime import datetime
 from typing import Optional, List, Tuple
 from constants import (
     DATABASE_ENABLED, DATABASE_URL, DB_HOST, DB_PORT,
-    DB_NAME, DB_USER, DB_PASSWORD, DB_SCHEMA
+    DB_NAME, DB_USER, DB_PASSWORD, DB_SCHEMA, LOGS_DIR
 )
 
 # Global connection object
@@ -101,7 +102,7 @@ def create_table_if_not_exists(connection):
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,
                     ip_address INET NOT NULL,
-                    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+                    ping_time TIMESTAMP WITH TIME ZONE NOT NULL,
                     success BOOLEAN NOT NULL,
                     response_time_ms FLOAT,
                     job_name VARCHAR(100),
@@ -110,7 +111,7 @@ def create_table_if_not_exists(connection):
                 );
 
                 -- Create indexes for common queries
-                CREATE INDEX IF NOT EXISTS idx_ping_results_timestamp ON {table_name}(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_ping_results_ping_time ON {table_name}(ping_time);
                 CREATE INDEX IF NOT EXISTS idx_ping_results_ip_address ON {table_name}(ip_address);
                 CREATE INDEX IF NOT EXISTS idx_ping_results_success ON {table_name}(success);
                 CREATE INDEX IF NOT EXISTS idx_ping_results_job_name ON {table_name}(job_name);
@@ -119,6 +120,51 @@ def create_table_if_not_exists(connection):
     except Exception as e:
         logging.error(f"Failed to create database table: {e}")
         raise
+
+def is_valid_ip(ip_string: str) -> bool:
+    """
+    Validate if a string is a valid IP address.
+
+    Args:
+        ip_string: String to validate as IP address
+
+    Returns:
+        bool: True if valid IP address, False otherwise
+    """
+    try:
+        ipaddress.ip_address(ip_string.strip())
+        return True
+    except ValueError:
+        return False
+
+def log_invalid_ips(invalid_ips: List[str], job_name: str = None) -> None:
+    """
+    Log invalid IP addresses to a dedicated log file.
+
+    Args:
+        invalid_ips: List of invalid IP address strings
+        job_name: Name of the job (optional)
+    """
+    if not invalid_ips:
+        return
+
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        invalid_log_path = LOGS_DIR / f"{timestamp}_invalid_ips.txt"
+
+        with open(invalid_log_path, 'w') as f:
+            f.write(f"# Invalid IP addresses found during ping job\n")
+            f.write(f"# Job: {job_name or 'Unknown'}\n")
+            f.write(f"# Timestamp: {datetime.now()}\n")
+            f.write(f"# Count: {len(invalid_ips)}\n\n")
+
+            for ip in invalid_ips:
+                f.write(f"{ip}\n")
+
+        logging.warning(f"Found {len(invalid_ips)} invalid IP addresses. See: {invalid_log_path}")
+
+    except Exception as e:
+        logging.error(f"Failed to write invalid IPs log: {e}")
 
 def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None,
                      timeout: int = None, count: int = None) -> bool:
@@ -142,15 +188,40 @@ def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None
         timestamp = datetime.now()
         table_name = get_table_name("ping_results")
 
+        # Filter results to separate valid and invalid IPs
+        valid_results = []
+        invalid_ips = []
+
+        for ip_address, success, response_time in results:
+            if is_valid_ip(ip_address):
+                valid_results.append((ip_address, success, response_time))
+            else:
+                invalid_ips.append(ip_address)
+
+        # Log invalid IPs if any found
+        if invalid_ips:
+            log_invalid_ips(invalid_ips, job_name)
+
+        # Only proceed with valid IPs
+        if not valid_results:
+            logging.warning("No valid IP addresses to save to database")
+            return len(invalid_ips) == 0  # Return True only if there were no invalid IPs
+
         with connection.cursor() as cursor:
-            for ip_address, success, response_time in results:
+            for ip_address, success, response_time in valid_results:
+                # For failed pings, store NULL instead of error strings in response_time_ms
+                response_time_value = response_time if success and isinstance(response_time, (int, float)) else None
+
                 cursor.execute(f"""
                     INSERT INTO {table_name}
-                    (ip_address, timestamp, success, response_time_ms, job_name, timeout_seconds, ping_count)
+                    (ip_address, ping_time, success, response_time_ms, job_name, timeout_seconds, ping_count)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (ip_address, timestamp, success, response_time, job_name, timeout, count))
+                """, (ip_address, timestamp, success, response_time_value, job_name, timeout, count))
 
-        logging.info(f"Saved {len(results)} ping results to database")
+        if invalid_ips:
+            logging.info(f"Saved {len(valid_results)} valid ping results to database ({len(invalid_ips)} invalid IPs filtered)")
+        else:
+            logging.info(f"Saved {len(valid_results)} ping results to database")
         return True
 
     except Exception as e:
@@ -176,7 +247,7 @@ def get_ping_statistics(ip_address: str = None, hours: int = 24) -> Optional[dic
         table_name = get_table_name("ping_results")
 
         with connection.cursor() as cursor:
-            where_clause = "WHERE timestamp >= NOW() - INTERVAL '%s hours'" % hours
+            where_clause = "WHERE ping_time >= NOW() - INTERVAL '%s hours'" % hours
             if ip_address:
                 where_clause += " AND ip_address = %s"
                 params = (ip_address,)
@@ -192,8 +263,8 @@ def get_ping_statistics(ip_address: str = None, hours: int = 24) -> Optional[dic
                     ROUND(
                         (COUNT(*) FILTER (WHERE success = true) * 100.0 / COUNT(*)), 2
                     ) as success_rate,
-                    MIN(timestamp) as first_ping,
-                    MAX(timestamp) as last_ping
+                    MIN(ping_time) as first_ping,
+                    MAX(ping_time) as last_ping
                 FROM {table_name}
                 {where_clause}
                 GROUP BY ip_address
