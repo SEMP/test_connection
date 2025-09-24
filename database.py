@@ -103,11 +103,10 @@ def create_table_if_not_exists(connection):
                     ip_address INET NOT NULL,
                     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
                     success BOOLEAN NOT NULL,
-                    response_time VARCHAR(20),
+                    response_time_ms FLOAT,
                     job_name VARCHAR(100),
                     timeout_seconds INTEGER,
-                    ping_count INTEGER,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    ping_count INTEGER
                 );
 
                 -- Create indexes for common queries
@@ -147,7 +146,7 @@ def save_ping_results(results: List[Tuple[str, bool, str]], job_name: str = None
             for ip_address, success, response_time in results:
                 cursor.execute(f"""
                     INSERT INTO {table_name}
-                    (ip_address, timestamp, success, response_time, job_name, timeout_seconds, ping_count)
+                    (ip_address, timestamp, success, response_time_ms, job_name, timeout_seconds, ping_count)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (ip_address, timestamp, success, response_time, job_name, timeout, count))
 

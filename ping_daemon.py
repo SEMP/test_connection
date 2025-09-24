@@ -147,7 +147,8 @@ class PingDaemon:
                     if success:
                         successful += 1
                         status = "✓ REACHABLE"
-                        self.logger.info(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_info} - processed: {progress}")
+                        response_display = f"{response_info:.1f}ms" if response_info is not None else "N/A"
+                        self.logger.info(f"Job '{job_name}': {ip_address:<15} {status:<12} {response_display} - processed: {progress}")
                     else:
                         failed += 1
                         status = "✗ UNREACHABLE"

@@ -46,20 +46,14 @@ def ping_host(ip_address: str, timeout: int = DEFAULT_PING_TIMEOUT, count: int =
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout+2)
 
         if result.returncode == 0:
-            # Extract response time from ping output
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if platform.system().lower() == 'windows':
-                    # Windows format: "Reply from x.x.x.x: bytes=32 time=1ms TTL=64"
-                    if 'time=' in line and 'ms' in line:
-                        time_part = line.split('time=')[1].split()[0]
-                        return (ip_address, True, time_part)
-                else:
-                    # Unix format: "64 bytes from x.x.x.x: icmp_seq=1 ttl=64 time=1.234 ms"
-                    if 'time=' in line:
-                        time_str = line.split('time=')[1].split()[0]
-                        return (ip_address, True, f"{time_str}ms")
-            return (ip_address, True, "N/A")
+            # Extract response time from ping output using regex
+            import re
+            time_pattern = r"time=(\d+(?:\.\d+)*)\s*ms"
+            match = re.search(time_pattern, result.stdout)
+            if match:
+                response_time = float(match.group(1))
+                return (ip_address, True, response_time)
+            return (ip_address, True, None)
         else:
             return (ip_address, False, "No response")
 
@@ -130,8 +124,14 @@ def log_result(ip_address: str, success: bool, response_info: str, success_log: 
     log_file = success_log if success else failure_log
     status = "SUCCESS" if success else "FAILED"
 
+    # Format response_info for file logging
+    if success and isinstance(response_info, (int, float)):
+        response_display = f"{response_info:.1f}ms"
+    else:
+        response_display = str(response_info) if response_info is not None else "N/A"
+
     with open(log_file, 'a') as f:
-        f.write(f"{ip_address}\t{status}\t{response_info}\n")
+        f.write(f"{ip_address}\t{status}\t{response_display}\n")
 
 
 def get_ip_list(ip_file: str = None, sql_file: str = None) -> List[str]:
@@ -240,17 +240,19 @@ def main() -> None:
                 successful += 1
                 status = "✓ REACHABLE"
                 color = "\033[92m"  # Green
+                response_display = f"{response_info:.1f}ms" if response_info is not None else "N/A"
             else:
                 failed += 1
                 status = "✗ UNREACHABLE"
                 color = "\033[91m"  # Red
+                response_display = response_info
 
             reset_color = "\033[0m"
 
             if args.verbose or not success:
-                print(f"{color}{ip_address:<15} {status:<12} {response_info}{reset_color}")
+                print(f"{color}{ip_address:<15} {status:<12} {response_display}{reset_color}")
             elif success:
-                print(f"{color}{ip_address:<15} {status:<12} {response_info}{reset_color}")
+                print(f"{color}{ip_address:<15} {status:<12} {response_display}{reset_color}")
 
     end_time = time.time()
 
